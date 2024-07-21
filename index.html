@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <h1>WebUSB Serial Interface for Arduino1</h1>
+  <h1>WebUSB Serial Interface for Arduino</h1>
   <div class="controls">
     <button id="scan" class="button">Scan for Devices</button>
     <select id="deviceList"></select>
@@ -42,7 +42,7 @@
       return 'usb' in navigator;
     }
 
-    scanButton.addEventListener('click', async () => {
+    async function scanForDevices() {
       if (!isWebUSBAvailable()) {
         outputDiv.innerHTML += 'WebUSB is not supported in this browser.<br>';
         return;
@@ -62,16 +62,16 @@
         if (devices.length === 0) {
           outputDiv.innerHTML += 'No devices found.<br>';
         } else {
-          connectButton.disabled = false;
+          connectButton.disabled = false; // Enable the connect button once a device is scanned
           outputDiv.innerHTML += 'Devices scanned.<br>';
         }
       } catch (error) {
-        outputDiv.innerHTML += 'Error: ' + error + '<br>';
+        outputDiv.innerHTML += 'Error during scanning: ' + error.message + '<br>';
         console.error('Scan Error:', error);
       }
-    });
+    }
 
-    connectButton.addEventListener('click', async () => {
+    async function connectToDevice() {
       if (!isWebUSBAvailable()) {
         outputDiv.innerHTML += 'WebUSB is not supported in this browser.<br>';
         return;
@@ -79,16 +79,15 @@
 
       try {
         const selectedSerial = deviceList.value;
-        const devices = await navigator.usb.getDevices();
-
-        device = devices.find(dev => dev.serialNumber === selectedSerial);
-        if (!device) {
-          throw new Error('Device not found');
+        if (!selectedSerial) {
+          outputDiv.innerHTML += 'Please select a device from the list.<br>';
+          return;
         }
 
-        await device.open();
-        await device.selectConfiguration(1);
+        device = await navigator.usb.requestDevice({ filters: [{ serialNumber: selectedSerial }] });
+        await device.open(); // Request access to the device
 
+        await device.selectConfiguration(1);
         const interfaces = device.configuration.interfaces;
 
         let interfaceNumber = null;
@@ -120,9 +119,6 @@
           throw new Error('No suitable interface found');
         }
 
-        console.log(`Selected Interface: ${interfaceNumber}, Alternate Setting: ${alternateSetting}`);
-        console.log(`IN Endpoint: ${inEndpointNumber}, OUT Endpoint: ${outEndpointNumber}`);
-
         await device.claimInterface(interfaceNumber);
 
         await device.controlTransferOut({
@@ -138,25 +134,30 @@
         readLoop(inEndpointNumber);
         outputDiv.innerHTML += 'Connected to Arduino<br>';
       } catch (error) {
-        outputDiv.innerHTML += 'Error: ' + error + '<br>';
+        outputDiv.innerHTML += 'Connection Error: ' + error.message + '<br>';
         console.error('Connect Error:', error);
       }
-    });
+    }
 
-    sendButton.addEventListener('click', async () => {
+    async function sendMessage() {
       if (!device) {
         outputDiv.innerHTML += 'Error: No device connected<br>';
         return;
       }
-      const encoder = new TextEncoder();
-      const data = encoder.encode(inputField.value + '\n');
-      await device.transferOut(outEndpointNumber, data);
-      inputField.value = '';
-    });
+      try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(inputField.value + '\n');
+        await device.transferOut(outEndpointNumber, data);
+        inputField.value = '';
+      } catch (error) {
+        outputDiv.innerHTML += 'Send Error: ' + error.message + '<br>';
+        console.error('Send Error:', error);
+      }
+    }
 
-    clearOutputButton.addEventListener('click', () => {
+    function clearOutput() {
       outputDiv.innerHTML = '';
-    });
+    }
 
     async function readLoop(inEndpointNumber) {
       const decoder = new TextDecoder();
@@ -174,7 +175,7 @@
             outputDiv.scrollTop = outputDiv.scrollHeight;
           }
         } catch (error) {
-          outputDiv.innerHTML += 'Read Error: ' + error + '<br>';
+          outputDiv.innerHTML += 'Read Error: ' + error.message + '<br>';
           console.error('Read Error:', error);
         }
       }
@@ -196,10 +197,16 @@
 
         outputDiv.innerHTML += 'Baud rate set to 115200<br>';
       } catch (error) {
-        outputDiv.innerHTML += 'Baud Rate Error: ' + error + '<br>';
+        outputDiv.innerHTML += 'Baud Rate Error: ' + error.message + '<br>';
         console.error('Baud Rate Error:', error);
       }
     }
+
+    // Event listeners
+    scanButton.addEventListener('click', scanForDevices);
+    connectButton.addEventListener('click', connectToDevice);
+    sendButton.addEventListener('click', sendMessage);
+    clearOutputButton.addEventListener('click', clearOutput);
   </script>
 </body>
 </html>
