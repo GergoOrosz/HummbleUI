@@ -44,14 +44,13 @@
       }
 
       try {
-        const devices = await navigator.usb.requestDevice({ filters: [] });
-        console.log(devices);  // Log the selected device
+        const device = await navigator.usb.requestDevice({ filters: [] });
+        console.log(device);  // Log the selected device
 
-        deviceList.innerHTML = ''; // Clear the previous list
-        if (devices) {
+        if (device) {
           let option = document.createElement('option');
-          option.value = devices.serialNumber;
-          option.text = `Device ${devices.productName} (${devices.serialNumber})`;
+          option.value = device.serialNumber;
+          option.text = `Device ${device.productName} (${device.serialNumber})`;
           deviceList.appendChild(option);
           outputDiv.innerHTML += 'Device scanned<br>';
         } else {
