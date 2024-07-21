@@ -1,23 +1,28 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebUSB Serial Interface</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; display: flex; flex-direction: column; align-items: center; }
     #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; width: 50%; height: 70vh; overflow-y: scroll; }
     .controls { display: flex; gap: 10px; margin-bottom: 20px; }
+    .button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    .button:disabled { background-color: #ccc; cursor: not-allowed; }
+    input[type="text"] { padding: 10px; font-size: 16px; width: 300px; }
   </style>
 </head>
 <body>
-  <h1>WebUSB Serial Interface for Arduino</h1>
+  <h1>WebUSB Serial Interface for Arduino1</h1>
   <div class="controls">
-    <button id="scan">Scan for Devices</button>
+    <button id="scan" class="button">Scan for Devices</button>
     <select id="deviceList"></select>
-    <button id="connect">Connect to Arduino</button>
-    <button id="clearOutput">Clear Output</button>
+    <button id="connect" class="button" disabled>Connect to Arduino</button>
+    <button id="clearOutput" class="button">Clear Output</button>
   </div>
   <input type="text" id="input" placeholder="Type a message">
-  <button id="send">Send</button>
+  <button id="send" class="button">Send</button>
   <div id="output"></div>
 
   <script>
@@ -44,17 +49,21 @@
       }
 
       try {
-        const device = await navigator.usb.requestDevice({ filters: [] });
-        console.log(device);  // Log the selected device
+        const devices = await navigator.usb.getDevices();
+        deviceList.innerHTML = ''; // Clear previous device list
 
-        if (device) {
+        devices.forEach(dev => {
           let option = document.createElement('option');
-          option.value = device.serialNumber;
-          option.text = `Device ${device.productName} (${device.serialNumber})`;
+          option.value = dev.serialNumber;
+          option.text = `Device ${dev.productName} (${dev.serialNumber})`;
           deviceList.appendChild(option);
-          outputDiv.innerHTML += 'Device scanned<br>';
-        } else {
+        });
+
+        if (devices.length === 0) {
           outputDiv.innerHTML += 'No devices found.<br>';
+        } else {
+          connectButton.disabled = false;
+          outputDiv.innerHTML += 'Devices scanned.<br>';
         }
       } catch (error) {
         outputDiv.innerHTML += 'Error: ' + error + '<br>';
@@ -71,7 +80,6 @@
       try {
         const selectedSerial = deviceList.value;
         const devices = await navigator.usb.getDevices();
-        console.log(devices);  // Log all connected devices
 
         device = devices.find(dev => dev.serialNumber === selectedSerial);
         if (!device) {
@@ -125,7 +133,6 @@
           index: interfaceNumber
         });
 
-        // Set baud rate to 115200
         await setBaudRate(device, 115200, interfaceNumber);
 
         readLoop(inEndpointNumber);
@@ -154,35 +161,44 @@
     async function readLoop(inEndpointNumber) {
       const decoder = new TextDecoder();
       while (true) {
-        const result = await device.transferIn(inEndpointNumber, 2048); // Increased buffer size to 512 bytes
-        const chunk = decoder.decode(result.data);
-        messageBuffer += chunk;
-        
-        let endOfMessageIndex;
-        while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
-          const message = messageBuffer.slice(0, endOfMessageIndex + 1);
-          messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
-          outputDiv.innerHTML += message + '<br>';
-          outputDiv.scrollTop = outputDiv.scrollHeight;
+        try {
+          const result = await device.transferIn(inEndpointNumber, 2048); // Adjust buffer size if needed
+          const chunk = decoder.decode(result.data);
+          messageBuffer += chunk;
+
+          let endOfMessageIndex;
+          while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
+            const message = messageBuffer.slice(0, endOfMessageIndex + 1);
+            messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
+            outputDiv.innerHTML += message + '<br>';
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+          }
+        } catch (error) {
+          outputDiv.innerHTML += 'Read Error: ' + error + '<br>';
+          console.error('Read Error:', error);
         }
       }
     }
 
     async function setBaudRate(device, baudRate, interfaceNumber) {
-      // Set the baud rate to 115200
-      const data = new Uint32Array([baudRate]);
-      const baudRateBuffer = new Uint8Array(data.buffer);
+      try {
+        const data = new Uint32Array([baudRate]);
+        const baudRateBuffer = new Uint8Array(data.buffer);
 
-      await device.controlTransferOut({
-        requestType: 'class',
-        recipient: 'interface',
-        request: 0x20, // Common request type for setting line coding
-        value: 0x00,
-        index: interfaceNumber,
-        data: baudRateBuffer
-      });
+        await device.controlTransferOut({
+          requestType: 'class',
+          recipient: 'interface',
+          request: 0x20,
+          value: 0x00,
+          index: interfaceNumber,
+          data: baudRateBuffer
+        });
 
-      outputDiv.innerHTML += 'Baud rate set to 115200<br>';
+        outputDiv.innerHTML += 'Baud rate set to 115200<br>';
+      } catch (error) {
+        outputDiv.innerHTML += 'Baud Rate Error: ' + error + '<br>';
+        console.error('Baud Rate Error:', error);
+      }
     }
   </script>
 </body>
