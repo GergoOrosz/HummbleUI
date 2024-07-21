@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WebUSB Serial Interface</title>
+  <title>WebUSB Serial Interface4</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; display: flex; flex-direction: column; align-items: center; }
     #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; width: 50%; height: 70vh; overflow-y: scroll; }
@@ -58,10 +58,11 @@
 
     async function connectToDevice() {
       try {
+        // You need to know your device's vendorId and productId
         const filters = [
-          { productId: 0x1234 } // Replace with your device's product ID or other filter criteria
+          { vendorId: 0x1234, productId: 0x5678 } // Replace with your device's vendorId and productId
         ];
-        
+
         // Request device with filter
         device = await navigator.usb.requestDevice({ filters });
 
