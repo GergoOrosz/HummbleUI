@@ -38,7 +38,6 @@
 
       try {
         const device = await navigator.usb.requestDevice({ filters: [] });
-        console.log(device);  // Log the selected device
 
         if (device) {
           let option = document.createElement('option');
@@ -64,7 +63,6 @@
       try {
         const selectedSerial = deviceList.value;
         const devices = await navigator.usb.getDevices();
-        console.log(devices);  // Log all connected devices
 
         device = devices.find(dev => dev.serialNumber === selectedSerial);
         if (!device) {
@@ -74,24 +72,23 @@
         await device.open();
         await device.selectConfiguration(1);
 
-        console.log(device.configurations); // Log configurations
-        const config = device.configuration;
-        console.log(config); // Log current configuration
+        const interfaces = device.configuration.interfaces;
 
-        const interfaces = config.interfaces;
-        interfaces.forEach(iface => {
-          console.log(`Interface Number: ${iface.interfaceNumber}`);
-          iface.alternates.forEach(alt => {
-            console.log(`  Alternate Setting: ${alt.alternateSetting}`);
-            alt.endpoints.forEach(endpoint => {
-              console.log(`    Endpoint Number: ${endpoint.endpointNumber}`);
-              console.log(`    Endpoint Direction: ${endpoint.direction}`);
-              console.log(`    Endpoint Type: ${endpoint.type}`);
-            });
-          });
-        });
+        let interfaceNumber = null;
+        for (const iface of interfaces) {
+          for (const alt of iface.alternates) {
+            if (alt.endpoints.length > 0) {
+              interfaceNumber = iface.interfaceNumber;
+              break;
+            }
+          }
+          if (interfaceNumber !== null) break;
+        }
 
-        const interfaceNumber = 1; // Change this as needed based on your inspection
+        if (interfaceNumber === null) {
+          throw new Error('No suitable interface found');
+        }
+
         await device.claimInterface(interfaceNumber);
 
         await device.controlTransferOut({
