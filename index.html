@@ -8,7 +8,7 @@
   </style>
 </head>
 <body>
-  <h1>WebUSB Serial Interface for A</h1>
+  <h1>WebUSB Serial Interface for Arduino</h1>
   <button id="scan">Scan for Devices</button>
   <select id="deviceList"></select>
   <button id="connect">Connect to Arduino</button>
@@ -19,6 +19,8 @@
 
   <script>
     let device;
+    let outEndpointNumber;
+    let inEndpointNumber;
     const scanButton = document.getElementById('scan');
     const connectButton = document.getElementById('connect');
     const sendButton = document.getElementById('send');
@@ -78,8 +80,6 @@
 
         let interfaceNumber = null;
         let alternateSetting = null;
-        let inEndpointNumber = null;
-        let outEndpointNumber = null;
 
         for (const iface of interfaces) {
           for (const alt of iface.alternates) {
@@ -120,6 +120,9 @@
           index: interfaceNumber
         });
 
+        // Set baud rate to 115200
+        await setBaudRate(device, 115200, interfaceNumber);
+
         readLoop(inEndpointNumber);
         outputDiv.innerHTML += 'Connected to Arduino<br>';
       } catch (error) {
@@ -146,6 +149,23 @@
         outputDiv.innerHTML += 'Received: ' + decoder.decode(result.data) + '<br>';
         outputDiv.scrollTop = outputDiv.scrollHeight;
       }
+    }
+
+    async function setBaudRate(device, baudRate, interfaceNumber) {
+      // Set the baud rate to 115200
+      const data = new Uint32Array([baudRate]);
+      const baudRateBuffer = new Uint8Array(data.buffer);
+
+      await device.controlTransferOut({
+        requestType: 'class',
+        recipient: 'interface',
+        request: 0x20, // Common request type for setting line coding
+        value: 0x00,
+        index: interfaceNumber,
+        data: baudRateBuffer
+      });
+
+      outputDiv.innerHTML += 'Baud rate set to 115200<br>';
     }
   </script>
 </body>
