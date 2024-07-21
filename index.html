@@ -1,135 +1,102 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WebUSB Serial Interface</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; display: flex; flex-direction: column; align-items: center; }
-    #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; width: 50%; height: 70vh; overflow-y: scroll; }
-    .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-  </style>
+  <title>Hummble VS</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; display: flex; flex-direction: column; align-items: center; }
+  #outputContainer { display: flex; align-items: flex-start; width: 100%; justify-content: center; }
+  #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; width: 50%; height: 70vh; overflow-y: scroll; }
+  #setup { 
+    position: absolute; 
+    right: 40px; /* Adjust this value to set how far from the right edge */
+    top: 160px;  /* Adjust this value to align with the top of the output window */
+  }
+  
+  #continue { 
+    position: absolute; 
+    right: 40px; /* Adjust this value to set how far from the right edge */
+    top: 190px;  /* Adjust this value to align with the top of the output window */
+  }
+  
+  #save { 
+    position: absolute; 
+    right: 40px; /* Adjust this value to set how far from the right edge */
+    top: 220px;  /* Adjust this value to align with the top of the output window */
+  }
+  
+  #reset { 
+    position: absolute; 
+    right: 40px; /* Adjust this value to set how far from the right edge */
+    top: 250px;  /* Adjust this value to align with the top of the output window */
+  }
+  
+   #monitor { 
+    position: absolute; 
+    right: 40px; /* Adjust this value to set how far from the right edge */
+    top: 280px;  /* Adjust this value to align with the top of the output window */
+  }
+  
+  .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; align-items: center; }
+  .controls div { display: flex; gap: 10px; }
+  #inputSection { display: flex; gap: 10px; width: 50%; }
+  #input { flex-grow: 1; }
+</style>
 </head>
 <body>
-  <h1>WebUSB Serial Interface for Arduino</h1>
+  <h1>Hummble Control Interface</h1>
   <div class="controls">
-    <button id="scan">Scan for Devices</button>
-    <select id="deviceList"></select>
-    <button id="connect">Connect to Arduino</button>
-    <button id="clearOutput">Clear Output</button>
+    <div>
+      <button id="connect">Connect to Hummble</button>
+      <button id="clearOutput">Clear Output</button>
+    </div>
+    <div id="inputSection">
+      <input type="text" id="input" placeholder="Type a message">
+      <button id="send">Send</button>
+    </div>
   </div>
-  <input type="text" id="input" placeholder="Type a message">
-  <button id="send">Send</button>
-  <div id="output"></div>
+  <div id="outputContainer">
+    <div id="output"></div>
+  </div>
+  <button id="setup">Setup</button>
+  <button id="continue">Continue</button>
+  <button id="save">Save</button>
+  <button id="reset">Reset</button>
+  <button id="monitor">Monitor</button>
+
+
 
   <script>
-    let device;
-    let outEndpointNumber;
-    let inEndpointNumber;
+    let port;
+    let reader;
+    let outputStream;
     let messageBuffer = '';
-    const scanButton = document.getElementById('scan');
+	let monitoring = false;
     const connectButton = document.getElementById('connect');
     const sendButton = document.getElementById('send');
+    const setupButton = document.getElementById('setup');
+	const continueButton = document.getElementById('continue');
+	const saveButton = document.getElementById('save');
+	const resetButton = document.getElementById('reset');
+	const monitorButton = document.getElementById('monitor');
     const clearOutputButton = document.getElementById('clearOutput');
-    const deviceList = document.getElementById('deviceList');
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
 
-    function isWebUSBAvailable() {
-      return 'usb' in navigator;
-    }
-
-    scanButton.addEventListener('click', async () => {
-      if (!isWebUSBAvailable()) {
-        outputDiv.innerHTML += 'WebUSB is not supported in this browser.<br>';
-        return;
-      }
-
-      try {
-        const device = await navigator.usb.requestDevice({ filters: [] });
-        console.log(device);  // Log the selected device
-
-        if (device) {
-          let option = document.createElement('option');
-          option.value = device.serialNumber;
-          option.text = `Device ${device.productName} (${device.serialNumber})`;
-          deviceList.appendChild(option);
-          outputDiv.innerHTML += 'Device scanned<br>';
-        } else {
-          outputDiv.innerHTML += 'No devices found.<br>';
-        }
-      } catch (error) {
-        outputDiv.innerHTML += 'Error: ' + error + '<br>';
-        console.error('Scan Error:', error);
-      }
-    });
-
     connectButton.addEventListener('click', async () => {
-      if (!isWebUSBAvailable()) {
-        outputDiv.innerHTML += 'WebUSB is not supported in this browser.<br>';
+      if (!("serial" in navigator)) {
+        outputDiv.innerHTML += 'WebSerial is not supported in this browser.<br>';
         return;
       }
 
       try {
-        const selectedSerial = deviceList.value;
-        const devices = await navigator.usb.getDevices();
-        console.log(devices);  // Log all connected devices
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 115200 });
+        outputDiv.innerHTML += 'Connected to Hummble<br>';
 
-        device = devices.find(dev => dev.serialNumber === selectedSerial);
-        if (!device) {
-          throw new Error('Device not found');
-        }
+        outputStream = port.writable.getWriter();
 
-        await device.open();
-        await device.selectConfiguration(1);
-
-        const interfaces = device.configuration.interfaces;
-
-        let interfaceNumber = null;
-        let alternateSetting = null;
-
-        for (const iface of interfaces) {
-          for (const alt of iface.alternates) {
-            if (alt.endpoints.length > 0) {
-              interfaceNumber = iface.interfaceNumber;
-              alternateSetting = alt.alternateSetting;
-
-              for (const endpoint of alt.endpoints) {
-                if (endpoint.direction === 'in') {
-                  inEndpointNumber = endpoint.endpointNumber;
-                } else if (endpoint.direction === 'out') {
-                  outEndpointNumber = endpoint.endpointNumber;
-                }
-              }
-
-              if (inEndpointNumber !== null && outEndpointNumber !== null) {
-                break;
-              }
-            }
-          }
-          if (interfaceNumber !== null) break;
-        }
-
-        if (interfaceNumber === null) {
-          throw new Error('No suitable interface found');
-        }
-
-        console.log(`Selected Interface: ${interfaceNumber}, Alternate Setting: ${alternateSetting}`);
-        console.log(`IN Endpoint: ${inEndpointNumber}, OUT Endpoint: ${outEndpointNumber}`);
-
-        await device.claimInterface(interfaceNumber);
-
-        await device.controlTransferOut({
-          requestType: 'class',
-          recipient: 'interface',
-          request: 0x22,
-          value: 0x01,
-          index: interfaceNumber
-        });
-
-        // Set baud rate to 115200
-        await setBaudRate(device, 115200, interfaceNumber);
-
-        readLoop(inEndpointNumber);
-        outputDiv.innerHTML += 'Connected to Arduino<br>';
+        reader = port.readable.getReader();
+        readLoop();
       } catch (error) {
         outputDiv.innerHTML += 'Error: ' + error + '<br>';
         console.error('Connect Error:', error);
@@ -137,52 +104,97 @@
     });
 
     sendButton.addEventListener('click', async () => {
-      if (!device) {
-        outputDiv.innerHTML += 'Error: No device connected<br>';
-        return;
-      }
-      const encoder = new TextEncoder();
-      const data = encoder.encode(inputField.value + '\n');
-      await device.transferOut(outEndpointNumber, data);
-      inputField.value = '';
+      sendMessage(inputField.value + '\n');
     });
+
+    inputField.addEventListener('keypress', async (event) => {
+      if (event.key === 'Enter') {
+        sendMessage(inputField.value + '\n');
+      }
+    });
+
+    setupButton.addEventListener('click', async () => {
+      sendMessage('<setup>\n');
+    });
+	
+	continueButton.addEventListener('click', async () => {
+      sendMessage('<continue>\n');
+    });
+    saveButton.addEventListener('click', async () => {
+      sendMessage('<save:1>\n');
+    });
+	
+	saveButton.addEventListener('click', async () => {
+      sendMessage('<save:1>\n');
+    });
+	
+	resetButton.addEventListener('click', async () => {
+      sendMessage('<save:0>\n');
+    });
+	
+    monitorButton.addEventListener('click', async () => {
+      if (monitoring) {
+		monitoring = false;
+        sendMessage('<mt:0>\n');
+      } 
+	  else {
+        monitoring = true;
+        sendMessage('<mt:3>\n');
+      }
+    });
+	
+
 
     clearOutputButton.addEventListener('click', () => {
       outputDiv.innerHTML = '';
     });
 
-    async function readLoop(inEndpointNumber) {
+    async function sendMessage(message) {
+      if (!port) {
+        outputDiv.innerHTML += 'Error: No device connected<br>';
+        return;
+      }
+      const encoder = new TextEncoder();
+      const data = encoder.encode(message);
+      await outputStream.write(data);
+      inputField.value = '';
+    }
+	
+	// Function to escape HTML characters
+	function escapeHtml(unsafe) {
+	return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+	}
+
+    async function readLoop() {
       const decoder = new TextDecoder();
       while (true) {
-        const result = await device.transferIn(inEndpointNumber, 2048); // Increased buffer size to 512 bytes
-        const chunk = decoder.decode(result.data);
-        messageBuffer += chunk;
-        
-        let endOfMessageIndex;
+        try {
+          const { value, done } = await reader.read();
+          if (done) {
+            reader.releaseLock();
+            break;
+          }
+          const chunk = decoder.decode(value);
+          messageBuffer += chunk;
+
+          let endOfMessageIndex;
         while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
-          const message = messageBuffer.slice(0, endOfMessageIndex + 1);
-          messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
-          outputDiv.innerHTML += message + '<br>';
-          outputDiv.scrollTop = outputDiv.scrollHeight;
+			const message = messageBuffer.slice(0, endOfMessageIndex + 1);
+			messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
+			const escapedMessage = escapeHtml(message); // Escape HTML characters
+			outputDiv.innerHTML += escapedMessage + '<br>';
+			outputDiv.scrollTop = outputDiv.scrollHeight;
+		}
+        } catch (error) {
+          console.error('Read Error:', error);
+          break;
         }
       }
-    }
-
-    async function setBaudRate(device, baudRate, interfaceNumber) {
-      // Set the baud rate to 115200
-      const data = new Uint32Array([baudRate]);
-      const baudRateBuffer = new Uint8Array(data.buffer);
-
-      await device.controlTransferOut({
-        requestType: 'class',
-        recipient: 'interface',
-        request: 0x20, // Common request type for setting line coding
-        value: 0x00,
-        index: interfaceNumber,
-        data: baudRateBuffer
-      });
-
-      outputDiv.innerHTML += 'Baud rate set to 115200<br>';
     }
   </script>
 </body>
