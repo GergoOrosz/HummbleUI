@@ -8,7 +8,7 @@
   </style>
 </head>
 <body>
-  <h1>WebUSB Serial Interface for Arduino</h1>
+  <h1>WebUSB Serial Interface for Ard</h1>
   <button id="scan">Scan for Devices</button>
   <select id="deviceList"></select>
   <button id="connect">Connect to Arduino</button>
@@ -145,8 +145,9 @@
     async function readLoop(inEndpointNumber) {
       const decoder = new TextDecoder();
       while (true) {
-        const result = await device.transferIn(inEndpointNumber, 64);
-        outputDiv.innerHTML += 'Received: ' + decoder.decode(result.data) + '<br>';
+        const result = await device.transferIn(inEndpointNumber, 512); // Increased buffer size to 512 bytes
+        const message = decoder.decode(result.data);
+        outputDiv.innerHTML += message + '<br>';
         outputDiv.scrollTop = outputDiv.scrollHeight;
       }
     }
