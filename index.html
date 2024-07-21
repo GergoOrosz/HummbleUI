@@ -3,16 +3,19 @@
 <head>
   <title>WebUSB Serial Interface</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; height: 200px; overflow-y: scroll; }
+    body { font-family: Arial, sans-serif; margin: 20px; display: flex; flex-direction: column; align-items: center; }
+    #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; width: 50%; height: 70vh; overflow-y: scroll; }
+    .controls { display: flex; gap: 10px; margin-bottom: 20px; }
   </style>
 </head>
 <body>
   <h1>WebUSB Serial Interface for Arduino</h1>
-  <button id="scan">Scan for Devices</button>
-  <select id="deviceList"></select>
-  <button id="connect">Connect to Arduino</button>
-  <br><br>
+  <div class="controls">
+    <button id="scan">Scan for Devices</button>
+    <select id="deviceList"></select>
+    <button id="connect">Connect to Arduino</button>
+    <button id="clearOutput">Clear Output</button>
+  </div>
   <input type="text" id="input" placeholder="Type a message">
   <button id="send">Send</button>
   <div id="output"></div>
@@ -25,6 +28,7 @@
     const scanButton = document.getElementById('scan');
     const connectButton = document.getElementById('connect');
     const sendButton = document.getElementById('send');
+    const clearOutputButton = document.getElementById('clearOutput');
     const deviceList = document.getElementById('deviceList');
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
@@ -141,6 +145,10 @@
       const data = encoder.encode(inputField.value + '\n');
       await device.transferOut(outEndpointNumber, data);
       inputField.value = '';
+    });
+
+    clearOutputButton.addEventListener('click', () => {
+      outputDiv.innerHTML = '';
     });
 
     async function readLoop(inEndpointNumber) {
