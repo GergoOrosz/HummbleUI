@@ -36,6 +36,12 @@
     top: 280px;  /* Adjust this value to align with the top of the output window */
   }
   
+     #toggle { 
+    position: absolute; 
+    right: 40px; /* Adjust this value to set how far from the right edge */
+    top: 310px;  /* Adjust this value to align with the top of the output window */
+  }
+  
   .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; align-items: center; }
   .controls div { display: flex; gap: 10px; }
   #inputSection { display: flex; gap: 10px; width: 50%; }
@@ -62,6 +68,7 @@
   <button id="save">Save</button>
   <button id="reset">Reset</button>
   <button id="monitor">Monitor</button>
+  <button id="toggle">Toggle ANC</button>
 
 
 
@@ -78,6 +85,7 @@
 	const saveButton = document.getElementById('save');
 	const resetButton = document.getElementById('reset');
 	const monitorButton = document.getElementById('monitor');
+	const toggleButton = document.getElementById('toggle');
     const clearOutputButton = document.getElementById('clearOutput');
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
@@ -141,6 +149,10 @@
         monitoring = true;
         sendMessage('<mt:3>\n');
       }
+    });
+	
+	toggleButton.addEventListener('click', async () => {
+      sendMessage('<toggle>\n');
     });
 	
 
