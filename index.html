@@ -44,17 +44,16 @@
       }
 
       try {
-        const devices = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x2341 }] });
+        const devices = await navigator.usb.requestDevice({ filters: [] });
         console.log(devices);  // Log the selected device
 
+        deviceList.innerHTML = ''; // Clear the previous list
         if (devices) {
-          devices.forEach(device => {
-            let option = document.createElement('option');
-            option.value = device.serialNumber;
-            option.text = `Device ${device.productName} (${device.serialNumber})`;
-            deviceList.appendChild(option);
-          });
-          outputDiv.innerHTML += 'Devices scanned<br>';
+          let option = document.createElement('option');
+          option.value = devices.serialNumber;
+          option.text = `Device ${devices.productName} (${devices.serialNumber})`;
+          deviceList.appendChild(option);
+          outputDiv.innerHTML += 'Device scanned<br>';
         } else {
           outputDiv.innerHTML += 'No devices found.<br>';
         }
@@ -156,7 +155,7 @@
     async function readLoop(inEndpointNumber) {
       const decoder = new TextDecoder();
       while (true) {
-        const result = await device.transferIn(inEndpointNumber, 512); // Increased buffer size to 512 bytes
+        const result = await device.transferIn(inEndpointNumber, 2048); // Increased buffer size to 512 bytes
         const chunk = decoder.decode(result.data);
         messageBuffer += chunk;
         
