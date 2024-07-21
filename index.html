@@ -13,7 +13,7 @@
   <div class="controls">
     <button id="scan">Scan for Devices</button>
     <select id="deviceList"></select>
-    <button id="connect">Connect to Arduino</button>
+    <button id="connect">Connect to Device</button>
     <button id="clearOutput">Clear Output</button>
   </div>
   <input type="text" id="input" placeholder="Type a message">
@@ -45,12 +45,14 @@
 
       try {
         const devices = await navigator.hid.requestDevice({ filters: [] });
+        console.log(devices); // Log device details for debugging
+
         deviceList.innerHTML = ''; // Clear the previous list
         if (devices.length > 0) {
           devices.forEach(dev => {
             let option = document.createElement('option');
             option.value = dev.productId;
-            option.text = `Device ${dev.productName} (${dev.serialNumber || 'No Serial Number'})`;
+            option.text = `Device ${dev.productName || 'Unnamed'} (${dev.serialNumber || 'No Serial Number'})`;
             deviceList.appendChild(option);
           });
           outputDiv.innerHTML += 'Devices scanned<br>';
@@ -72,19 +74,20 @@
       try {
         const selectedProductId = parseInt(deviceList.value, 16);
         const devices = await navigator.hid.getDevices();
-        device = devices.find(dev => dev.productId === selectedProductId);
+        console.log(devices); // Log all connected devices for debugging
 
+        device = devices.find(dev => dev.productId === selectedProductId);
         if (!device) {
           throw new Error('Device not found');
         }
 
         await device.open();
-        
-        // Assuming the device uses Report IDs 1 and 2 for input and output
+
+        // Configure your device's report IDs correctly
         inputReportId = 1;  // Adjust as needed
         outputReportId = 2; // Adjust as needed
 
-        outputDiv.innerHTML += 'Connected to Arduino<br>';
+        outputDiv.innerHTML += 'Connected to Device<br>';
 
         device.addEventListener('inputreport', handleInputReport);
 
@@ -101,8 +104,13 @@
       }
       const encoder = new TextEncoder();
       const data = encoder.encode(inputField.value + '\n');
-      await device.sendReport(outputReportId, data);
-      inputField.value = '';
+      try {
+        await device.sendReport(outputReportId, data);
+        inputField.value = '';
+      } catch (error) {
+        outputDiv.innerHTML += 'Error sending data: ' + error + '<br>';
+        console.error('Send Error:', error);
+      }
     });
 
     clearOutputButton.addEventListener('click', () => {
