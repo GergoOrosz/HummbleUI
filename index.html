@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WebUSB Serial Interface3</title>
+  <title>WebUSB Serial Interface</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; display: flex; flex-direction: column; align-items: center; }
     #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; width: 50%; height: 70vh; overflow-y: scroll; }
@@ -42,7 +42,7 @@
         if (devices.length > 0) {
           devices.forEach(dev => {
             let option = document.createElement('option');
-            option.value = dev.id; // Use device id for selection
+            option.value = dev.serialNumber || dev.productId; // Use serialNumber or productId for selection
             option.text = `Device ${dev.productName || 'Unnamed'} (${dev.serialNumber || 'No Serial Number'})`;
             deviceList.appendChild(option);
           });
@@ -58,13 +58,12 @@
 
     async function connectToDevice() {
       try {
-        const selectedDeviceId = deviceList.value;
-        const devices = await navigator.usb.getDevices();
-        device = devices.find(dev => dev.id === selectedDeviceId);
-
-        if (!device) {
-          throw new Error('Device not found');
-        }
+        const filters = [
+          { productId: 0x1234 } // Replace with your device's product ID or other filter criteria
+        ];
+        
+        // Request device with filter
+        device = await navigator.usb.requestDevice({ filters });
 
         await device.open();
         await device.selectConfiguration(1);
@@ -103,7 +102,7 @@
     }
 
     function handleInputReport() {
-      device.transferIn(inEndpointNumber, 2048).then(result => {
+      device.transferIn(inEndpointNumber, 64).then(result => {
         const decoder = new TextDecoder();
         const message = decoder.decode(result.data);
         messageBuffer += message;
