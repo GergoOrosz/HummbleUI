@@ -145,7 +145,7 @@
     async function readLoop(inEndpointNumber) {
       const decoder = new TextDecoder();
       while (true) {
-        const result = await device.transferIn(inEndpointNumber, 512); // Increased buffer size to 512 bytes
+        const result = await device.transferIn(inEndpointNumber, 2048); // Increased buffer size to 512 bytes
         const message = decoder.decode(result.data);
         outputDiv.innerHTML += message + '<br>';
         outputDiv.scrollTop = outputDiv.scrollHeight;
