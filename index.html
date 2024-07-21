@@ -8,7 +8,7 @@
   </style>
 </head>
 <body>
-  <h1>WebUSB Serial Interface for Arduino</h1>
+  <h1>WebUSB Serial Interface for H</h1>
   <button id="scan">Scan for Devices</button>
   <select id="deviceList"></select>
   <button id="connect">Connect to Arduino</button>
@@ -37,7 +37,9 @@
       }
 
       try {
-        const device = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x2341 }] });
+        const device = await navigator.usb.requestDevice({ filters: [] });
+        console.log(device);  // Log the selected device
+
         if (device) {
           let option = document.createElement('option');
           option.value = device.serialNumber;
@@ -49,6 +51,7 @@
         }
       } catch (error) {
         outputDiv.innerHTML += 'Error: ' + error + '<br>';
+        console.error('Scan Error:', error);
       }
     });
 
@@ -61,6 +64,8 @@
       try {
         const selectedSerial = deviceList.value;
         const devices = await navigator.usb.getDevices();
+        console.log(devices);  // Log all connected devices
+
         device = devices.find(dev => dev.serialNumber === selectedSerial);
         if (!device) {
           throw new Error('Device not found');
@@ -80,6 +85,7 @@
         outputDiv.innerHTML += 'Connected to Arduino<br>';
       } catch (error) {
         outputDiv.innerHTML += 'Error: ' + error + '<br>';
+        console.error('Connect Error:', error);
       }
     });
 
