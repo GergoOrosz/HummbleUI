@@ -1,28 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebUSB Serial Interface</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; display: flex; flex-direction: column; align-items: center; }
     #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; width: 50%; height: 70vh; overflow-y: scroll; }
     .controls { display: flex; gap: 10px; margin-bottom: 20px; }
-    .button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-    .button:disabled { background-color: #ccc; cursor: not-allowed; }
-    input[type="text"] { padding: 10px; font-size: 16px; width: 300px; }
   </style>
 </head>
 <body>
   <h1>WebUSB Serial Interface for Arduino</h1>
   <div class="controls">
-    <button id="scan" class="button">Scan for Devices</button>
+    <button id="scan">Scan for Devices</button>
     <select id="deviceList"></select>
-    <button id="connect" class="button" disabled>Connect to Arduino</button>
-    <button id="clearOutput" class="button">Clear Output</button>
+    <button id="connect">Connect to Arduino</button>
+    <button id="clearOutput">Clear Output</button>
   </div>
   <input type="text" id="input" placeholder="Type a message">
-  <button id="send" class="button">Send</button>
+  <button id="send">Send</button>
   <div id="output"></div>
 
   <script>
@@ -42,36 +37,32 @@
       return 'usb' in navigator;
     }
 
-    async function scanForDevices() {
+    scanButton.addEventListener('click', async () => {
       if (!isWebUSBAvailable()) {
         outputDiv.innerHTML += 'WebUSB is not supported in this browser.<br>';
         return;
       }
 
       try {
-        const devices = await navigator.usb.getDevices();
-        deviceList.innerHTML = ''; // Clear previous device list
+        const device = await navigator.usb.requestDevice({ filters: [] });
+        console.log(device);  // Log the selected device
 
-        devices.forEach(dev => {
+        if (device) {
           let option = document.createElement('option');
-          option.value = dev.serialNumber;
-          option.text = `Device ${dev.productName} (${dev.serialNumber})`;
+          option.value = device.serialNumber;
+          option.text = `Device ${device.productName} (${device.serialNumber})`;
           deviceList.appendChild(option);
-        });
-
-        if (devices.length === 0) {
-          outputDiv.innerHTML += 'No devices found.<br>';
+          outputDiv.innerHTML += 'Device scanned<br>';
         } else {
-          connectButton.disabled = false; // Enable the connect button once a device is scanned
-          outputDiv.innerHTML += 'Devices scanned.<br>';
+          outputDiv.innerHTML += 'No devices found.<br>';
         }
       } catch (error) {
-        outputDiv.innerHTML += 'Error during scanning: ' + error.message + '<br>';
+        outputDiv.innerHTML += 'Error: ' + error + '<br>';
         console.error('Scan Error:', error);
       }
-    }
+    });
 
-    async function connectToDevice() {
+    connectButton.addEventListener('click', async () => {
       if (!isWebUSBAvailable()) {
         outputDiv.innerHTML += 'WebUSB is not supported in this browser.<br>';
         return;
@@ -79,15 +70,17 @@
 
       try {
         const selectedSerial = deviceList.value;
-        if (!selectedSerial) {
-          outputDiv.innerHTML += 'Please select a device from the list.<br>';
-          return;
+        const devices = await navigator.usb.getDevices();
+        console.log(devices);  // Log all connected devices
+
+        device = devices.find(dev => dev.serialNumber === selectedSerial);
+        if (!device) {
+          throw new Error('Device not found');
         }
 
-        device = await navigator.usb.requestDevice({ filters: [{ serialNumber: selectedSerial }] });
-        await device.open(); // Request access to the device
-
+        await device.open();
         await device.selectConfiguration(1);
+
         const interfaces = device.configuration.interfaces;
 
         let interfaceNumber = null;
@@ -119,6 +112,9 @@
           throw new Error('No suitable interface found');
         }
 
+        console.log(`Selected Interface: ${interfaceNumber}, Alternate Setting: ${alternateSetting}`);
+        console.log(`IN Endpoint: ${inEndpointNumber}, OUT Endpoint: ${outEndpointNumber}`);
+
         await device.claimInterface(interfaceNumber);
 
         await device.controlTransferOut({
@@ -129,84 +125,65 @@
           index: interfaceNumber
         });
 
+        // Set baud rate to 115200
         await setBaudRate(device, 115200, interfaceNumber);
 
         readLoop(inEndpointNumber);
         outputDiv.innerHTML += 'Connected to Arduino<br>';
       } catch (error) {
-        outputDiv.innerHTML += 'Connection Error: ' + error.message + '<br>';
+        outputDiv.innerHTML += 'Error: ' + error + '<br>';
         console.error('Connect Error:', error);
       }
-    }
+    });
 
-    async function sendMessage() {
+    sendButton.addEventListener('click', async () => {
       if (!device) {
         outputDiv.innerHTML += 'Error: No device connected<br>';
         return;
       }
-      try {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(inputField.value + '\n');
-        await device.transferOut(outEndpointNumber, data);
-        inputField.value = '';
-      } catch (error) {
-        outputDiv.innerHTML += 'Send Error: ' + error.message + '<br>';
-        console.error('Send Error:', error);
-      }
-    }
+      const encoder = new TextEncoder();
+      const data = encoder.encode(inputField.value + '\n');
+      await device.transferOut(outEndpointNumber, data);
+      inputField.value = '';
+    });
 
-    function clearOutput() {
+    clearOutputButton.addEventListener('click', () => {
       outputDiv.innerHTML = '';
-    }
+    });
 
     async function readLoop(inEndpointNumber) {
       const decoder = new TextDecoder();
       while (true) {
-        try {
-          const result = await device.transferIn(inEndpointNumber, 2048); // Adjust buffer size if needed
-          const chunk = decoder.decode(result.data);
-          messageBuffer += chunk;
-
-          let endOfMessageIndex;
-          while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
-            const message = messageBuffer.slice(0, endOfMessageIndex + 1);
-            messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
-            outputDiv.innerHTML += message + '<br>';
-            outputDiv.scrollTop = outputDiv.scrollHeight;
-          }
-        } catch (error) {
-          outputDiv.innerHTML += 'Read Error: ' + error.message + '<br>';
-          console.error('Read Error:', error);
+        const result = await device.transferIn(inEndpointNumber, 2048); // Increased buffer size to 512 bytes
+        const chunk = decoder.decode(result.data);
+        messageBuffer += chunk;
+        
+        let endOfMessageIndex;
+        while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
+          const message = messageBuffer.slice(0, endOfMessageIndex + 1);
+          messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
+          outputDiv.innerHTML += message + '<br>';
+          outputDiv.scrollTop = outputDiv.scrollHeight;
         }
       }
     }
 
     async function setBaudRate(device, baudRate, interfaceNumber) {
-      try {
-        const data = new Uint32Array([baudRate]);
-        const baudRateBuffer = new Uint8Array(data.buffer);
+      // Set the baud rate to 115200
+      const data = new Uint32Array([baudRate]);
+      const baudRateBuffer = new Uint8Array(data.buffer);
 
-        await device.controlTransferOut({
-          requestType: 'class',
-          recipient: 'interface',
-          request: 0x20,
-          value: 0x00,
-          index: interfaceNumber,
-          data: baudRateBuffer
-        });
+      await device.controlTransferOut({
+        requestType: 'class',
+        recipient: 'interface',
+        request: 0x20, // Common request type for setting line coding
+        value: 0x00,
+        index: interfaceNumber,
+        data: baudRateBuffer
+      });
 
-        outputDiv.innerHTML += 'Baud rate set to 115200<br>';
-      } catch (error) {
-        outputDiv.innerHTML += 'Baud Rate Error: ' + error.message + '<br>';
-        console.error('Baud Rate Error:', error);
-      }
+      outputDiv.innerHTML += 'Baud rate set to 115200<br>';
     }
-
-    // Event listeners
-    scanButton.addEventListener('click', scanForDevices);
-    connectButton.addEventListener('click', connectToDevice);
-    sendButton.addEventListener('click', sendMessage);
-    clearOutputButton.addEventListener('click', clearOutput);
   </script>
 </body>
 </html>
