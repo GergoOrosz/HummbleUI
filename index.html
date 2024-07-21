@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Hummble Control interface</title>
+  <title>WebUSB Serial Interface</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; height: 200px; overflow-y: scroll; }
   </style>
 </head>
 <body>
-  <h1>Hummble Control interface</h1>
+  <h1>WebUSB Serial Interface for Arduino</h1>
   <button id="scan">Scan for Devices</button>
   <select id="deviceList"></select>
-  <button id="connect">Connect to Hummble</button>
+  <button id="connect">Connect to Arduino</button>
   <br><br>
   <input type="text" id="input" placeholder="Type a message">
   <button id="send">Send</button>
@@ -26,26 +26,41 @@
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
 
-    let devices = [];
+    function isWebUSBAvailable() {
+      return 'usb' in navigator;
+    }
 
     scanButton.addEventListener('click', async () => {
+      if (!isWebUSBAvailable()) {
+        outputDiv.innerHTML += 'WebUSB is not supported in this browser.<br>';
+        return;
+      }
+
       try {
-        devices = await navigator.usb.getDevices();
-        devices.forEach(device => {
+        const device = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x2341 }] });
+        if (device) {
           let option = document.createElement('option');
           option.value = device.serialNumber;
           option.text = `Device ${device.productName} (${device.serialNumber})`;
           deviceList.appendChild(option);
-        });
-        outputDiv.innerHTML += 'Devices scanned<br>';
+          outputDiv.innerHTML += 'Device scanned<br>';
+        } else {
+          outputDiv.innerHTML += 'No devices found.<br>';
+        }
       } catch (error) {
         outputDiv.innerHTML += 'Error: ' + error + '<br>';
       }
     });
 
     connectButton.addEventListener('click', async () => {
+      if (!isWebUSBAvailable()) {
+        outputDiv.innerHTML += 'WebUSB is not supported in this browser.<br>';
+        return;
+      }
+
       try {
         const selectedSerial = deviceList.value;
+        const devices = await navigator.usb.getDevices();
         device = devices.find(dev => dev.serialNumber === selectedSerial);
         if (!device) {
           throw new Error('Device not found');
