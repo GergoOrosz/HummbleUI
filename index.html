@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WebUSB Serial Interface</title>
+  <title>WebUSB Serial Interface2</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; display: flex; flex-direction: column; align-items: center; }
     #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; width: 50%; height: 70vh; overflow-y: scroll; }
@@ -35,7 +35,6 @@
 
     async function scanDevices() {
       try {
-        // Request devices with specific filters or empty for all devices
         const devices = await navigator.usb.getDevices();
         console.log(devices); // Log devices for debugging
 
@@ -43,8 +42,8 @@
         if (devices.length > 0) {
           devices.forEach(dev => {
             let option = document.createElement('option');
-            option.value = dev.usbDevice.productId; // Use productId or any unique identifier
-            option.text = `Device ${dev.usbDevice.productName || 'Unnamed'} (${dev.usbDevice.serialNumber || 'No Serial Number'})`;
+            option.value = dev.id; // Use device id for selection
+            option.text = `Device ${dev.productName || 'Unnamed'} (${dev.serialNumber || 'No Serial Number'})`;
             deviceList.appendChild(option);
           });
           outputDiv.innerHTML += 'Devices scanned<br>';
@@ -59,19 +58,28 @@
 
     async function connectToDevice() {
       try {
-        const selectedProductId = parseInt(deviceList.value, 16);
-        device = await navigator.usb.requestDevice({ filters: [{ productId: selectedProductId }] });
+        const selectedDeviceId = deviceList.value;
+        device = navigator.usb.getDevices().then(devices => {
+          return devices.find(dev => dev.id === selectedDeviceId);
+        });
+
+        if (!device) {
+          throw new Error('Device not found');
+        }
 
         await device.open();
         await device.selectConfiguration(1);
         await device.claimInterface(0); // Adjust as needed for your device
+
+        // Find the correct endpoints
         const interfaceDescriptor = device.configuration.interfaces[0];
         outEndpointNumber = interfaceDescriptor.alternate.endpoints[0].endpointNumber;
         inEndpointNumber = interfaceDescriptor.alternate.endpoints[1].endpointNumber;
 
         outputDiv.innerHTML += 'Connected to Device<br>';
 
-        device.transferIn(inEndpointNumber, 64).then(handleInputReport);
+        // Start listening for data
+        handleInputReport();
 
       } catch (error) {
         outputDiv.innerHTML += 'Error connecting to device: ' + error + '<br>';
