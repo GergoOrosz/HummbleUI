@@ -8,7 +8,7 @@
   </style>
 </head>
 <body>
-  <h1>WebUSB Serial Interface for H</h1>
+  <h1>WebUSB Serial Interface for Arduino</h1>
   <button id="scan">Scan for Devices</button>
   <select id="deviceList"></select>
   <button id="connect">Connect to Arduino</button>
@@ -73,14 +73,35 @@
 
         await device.open();
         await device.selectConfiguration(1);
-        await device.claimInterface(2);
+
+        console.log(device.configurations); // Log configurations
+        const config = device.configuration;
+        console.log(config); // Log current configuration
+
+        const interfaces = config.interfaces;
+        interfaces.forEach(iface => {
+          console.log(`Interface Number: ${iface.interfaceNumber}`);
+          iface.alternates.forEach(alt => {
+            console.log(`  Alternate Setting: ${alt.alternateSetting}`);
+            alt.endpoints.forEach(endpoint => {
+              console.log(`    Endpoint Number: ${endpoint.endpointNumber}`);
+              console.log(`    Endpoint Direction: ${endpoint.direction}`);
+              console.log(`    Endpoint Type: ${endpoint.type}`);
+            });
+          });
+        });
+
+        const interfaceNumber = interfaces[0].interfaceNumber; // Change this as needed based on your inspection
+        await device.claimInterface(interfaceNumber);
+
         await device.controlTransferOut({
           requestType: 'class',
           recipient: 'interface',
           request: 0x22,
           value: 0x01,
-          index: 0x02
+          index: interfaceNumber
         });
+
         readLoop();
         outputDiv.innerHTML += 'Connected to Arduino<br>';
       } catch (error) {
