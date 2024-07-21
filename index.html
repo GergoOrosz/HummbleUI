@@ -8,7 +8,7 @@
   </style>
 </head>
 <body>
-  <h1>WebUSB Serial Interface for Arduino</h1>
+  <h1>WebUSB Serial Interface for A</h1>
   <button id="scan">Scan for Devices</button>
   <select id="deviceList"></select>
   <button id="connect">Connect to Arduino</button>
@@ -38,6 +38,7 @@
 
       try {
         const device = await navigator.usb.requestDevice({ filters: [] });
+        console.log(device);  // Log the selected device
 
         if (device) {
           let option = document.createElement('option');
@@ -63,6 +64,7 @@
       try {
         const selectedSerial = deviceList.value;
         const devices = await navigator.usb.getDevices();
+        console.log(devices);  // Log all connected devices
 
         device = devices.find(dev => dev.serialNumber === selectedSerial);
         if (!device) {
@@ -75,11 +77,27 @@
         const interfaces = device.configuration.interfaces;
 
         let interfaceNumber = null;
+        let alternateSetting = null;
+        let inEndpointNumber = null;
+        let outEndpointNumber = null;
+
         for (const iface of interfaces) {
           for (const alt of iface.alternates) {
             if (alt.endpoints.length > 0) {
               interfaceNumber = iface.interfaceNumber;
-              break;
+              alternateSetting = alt.alternateSetting;
+
+              for (const endpoint of alt.endpoints) {
+                if (endpoint.direction === 'in') {
+                  inEndpointNumber = endpoint.endpointNumber;
+                } else if (endpoint.direction === 'out') {
+                  outEndpointNumber = endpoint.endpointNumber;
+                }
+              }
+
+              if (inEndpointNumber !== null && outEndpointNumber !== null) {
+                break;
+              }
             }
           }
           if (interfaceNumber !== null) break;
@@ -88,6 +106,9 @@
         if (interfaceNumber === null) {
           throw new Error('No suitable interface found');
         }
+
+        console.log(`Selected Interface: ${interfaceNumber}, Alternate Setting: ${alternateSetting}`);
+        console.log(`IN Endpoint: ${inEndpointNumber}, OUT Endpoint: ${outEndpointNumber}`);
 
         await device.claimInterface(interfaceNumber);
 
@@ -99,7 +120,7 @@
           index: interfaceNumber
         });
 
-        readLoop();
+        readLoop(inEndpointNumber);
         outputDiv.innerHTML += 'Connected to Arduino<br>';
       } catch (error) {
         outputDiv.innerHTML += 'Error: ' + error + '<br>';
@@ -114,14 +135,14 @@
       }
       const encoder = new TextEncoder();
       const data = encoder.encode(inputField.value + '\n');
-      await device.transferOut(4, data);
+      await device.transferOut(outEndpointNumber, data);
       inputField.value = '';
     });
 
-    async function readLoop() {
+    async function readLoop(inEndpointNumber) {
       const decoder = new TextDecoder();
       while (true) {
-        const result = await device.transferIn(5, 64);
+        const result = await device.transferIn(inEndpointNumber, 64);
         outputDiv.innerHTML += 'Received: ' + decoder.decode(result.data) + '<br>';
         outputDiv.scrollTop = outputDiv.scrollHeight;
       }
