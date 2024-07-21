@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Hummble Control interface</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; height: 200px; overflow-y: scroll; }
+  </style>
+</head>
+<body>
+  <h1>Hummble Control interface</h1>
+  <button id="scan">Scan for Devices</button>
+  <select id="deviceList"></select>
+  <button id="connect">Connect to Hummble</button>
+  <br><br>
+  <input type="text" id="input" placeholder="Type a message">
+  <button id="send">Send</button>
+  <div id="output"></div>
+
+  <script>
+    let device;
+    const scanButton = document.getElementById('scan');
+    const connectButton = document.getElementById('connect');
+    const sendButton = document.getElementById('send');
+    const deviceList = document.getElementById('deviceList');
+    const outputDiv = document.getElementById('output');
+    const inputField = document.getElementById('input');
+
+    let devices = [];
+
+    scanButton.addEventListener('click', async () => {
+      try {
+        devices = await navigator.usb.getDevices();
+        devices.forEach(device => {
+          let option = document.createElement('option');
+          option.value = device.serialNumber;
+          option.text = `Device ${device.productName} (${device.serialNumber})`;
+          deviceList.appendChild(option);
+        });
+        outputDiv.innerHTML += 'Devices scanned<br>';
+      } catch (error) {
+        outputDiv.innerHTML += 'Error: ' + error + '<br>';
+      }
+    });
+
+    connectButton.addEventListener('click', async () => {
+      try {
+        const selectedSerial = deviceList.value;
+        device = devices.find(dev => dev.serialNumber === selectedSerial);
+        if (!device) {
+          throw new Error('Device not found');
+        }
+
+        await device.open();
+        await device.selectConfiguration(1);
+        await device.claimInterface(2);
+        await device.controlTransferOut({
+          requestType: 'class',
+          recipient: 'interface',
+          request: 0x22,
+          value: 0x01,
+          index: 0x02
+        });
+        readLoop();
+        outputDiv.innerHTML += 'Connected to Arduino<br>';
+      } catch (error) {
+        outputDiv.innerHTML += 'Error: ' + error + '<br>';
+      }
+    });
+
+    sendButton.addEventListener('click', async () => {
+      if (!device) {
+        outputDiv.innerHTML += 'Error: No device connected<br>';
+        return;
+      }
+      const encoder = new TextEncoder();
+      const data = encoder.encode(inputField.value + '\n');
+      await device.transferOut(4, data);
+      inputField.value = '';
+    });
+
+    async function readLoop() {
+      const decoder = new TextDecoder();
+      while (true) {
+        const result = await device.transferIn(5, 64);
+        outputDiv.innerHTML += 'Received: ' + decoder.decode(result.data) + '<br>';
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+      }
+    }
+  </script>
+</body>
+</html>
