@@ -8,7 +8,7 @@
   </style>
 </head>
 <body>
-  <h1>WebUSB Serial Interface for Ard</h1>
+  <h1>WebUSB Serial Interface for Arduino</h1>
   <button id="scan">Scan for Devices</button>
   <select id="deviceList"></select>
   <button id="connect">Connect to Arduino</button>
@@ -21,6 +21,7 @@
     let device;
     let outEndpointNumber;
     let inEndpointNumber;
+    let messageBuffer = '';
     const scanButton = document.getElementById('scan');
     const connectButton = document.getElementById('connect');
     const sendButton = document.getElementById('send');
@@ -146,9 +147,16 @@
       const decoder = new TextDecoder();
       while (true) {
         const result = await device.transferIn(inEndpointNumber, 2048); // Increased buffer size to 512 bytes
-        const message = decoder.decode(result.data);
-        outputDiv.innerHTML += message + '<br>';
-        outputDiv.scrollTop = outputDiv.scrollHeight;
+        const chunk = decoder.decode(result.data);
+        messageBuffer += chunk;
+        
+        let endOfMessageIndex;
+        while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
+          const message = messageBuffer.slice(0, endOfMessageIndex + 1);
+          messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
+          outputDiv.innerHTML += message + '<br>';
+          outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
       }
     }
 
