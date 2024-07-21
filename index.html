@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WebHID Serial Interface</title>
+  <title>WebUSB Serial Interface</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; display: flex; flex-direction: column; align-items: center; }
     #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; width: 50%; height: 70vh; overflow-y: scroll; }
@@ -9,7 +9,7 @@
   </style>
 </head>
 <body>
-  <h1>WebHID Serial Interface for Arduino</h1>
+  <h1>WebUSB Serial Interface for Arduino</h1>
   <div class="controls">
     <button id="scan">Scan for Devices</button>
     <select id="deviceList"></select>
@@ -22,8 +22,8 @@
 
   <script>
     let device;
-    let inputReportId;
-    let outputReportId;
+    let outEndpointNumber;
+    let inEndpointNumber;
     let messageBuffer = '';
     const scanButton = document.getElementById('scan');
     const connectButton = document.getElementById('connect');
@@ -33,26 +33,18 @@
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
 
-    function isWebHIDAvailable() {
-      return 'hid' in navigator;
-    }
-
-    scanButton.addEventListener('click', async () => {
-      if (!isWebHIDAvailable()) {
-        outputDiv.innerHTML += 'WebHID is not supported in this browser.<br>';
-        return;
-      }
-
+    async function scanDevices() {
       try {
-        const devices = await navigator.hid.requestDevice({ filters: [] });
-        console.log(devices); // Log device details for debugging
+        // Request devices with specific filters or empty for all devices
+        const devices = await navigator.usb.getDevices();
+        console.log(devices); // Log devices for debugging
 
-        deviceList.innerHTML = ''; // Clear the previous list
+        deviceList.innerHTML = ''; // Clear previous list
         if (devices.length > 0) {
           devices.forEach(dev => {
             let option = document.createElement('option');
-            option.value = dev.productId;
-            option.text = `Device ${dev.productName || 'Unnamed'} (${dev.serialNumber || 'No Serial Number'})`;
+            option.value = dev.usbDevice.productId; // Use productId or any unique identifier
+            option.text = `Device ${dev.usbDevice.productName || 'Unnamed'} (${dev.usbDevice.serialNumber || 'No Serial Number'})`;
             deviceList.appendChild(option);
           });
           outputDiv.innerHTML += 'Devices scanned<br>';
@@ -60,44 +52,34 @@
           outputDiv.innerHTML += 'No devices found.<br>';
         }
       } catch (error) {
-        outputDiv.innerHTML += 'Error: ' + error + '<br>';
+        outputDiv.innerHTML += 'Error scanning devices: ' + error + '<br>';
         console.error('Scan Error:', error);
       }
-    });
+    }
 
-    connectButton.addEventListener('click', async () => {
-      if (!isWebHIDAvailable()) {
-        outputDiv.innerHTML += 'WebHID is not supported in this browser.<br>';
-        return;
-      }
-
+    async function connectToDevice() {
       try {
         const selectedProductId = parseInt(deviceList.value, 16);
-        const devices = await navigator.hid.getDevices();
-        console.log(devices); // Log all connected devices for debugging
-
-        device = devices.find(dev => dev.productId === selectedProductId);
-        if (!device) {
-          throw new Error('Device not found');
-        }
+        device = await navigator.usb.requestDevice({ filters: [{ productId: selectedProductId }] });
 
         await device.open();
-
-        // Configure your device's report IDs correctly
-        inputReportId = 1;  // Adjust as needed
-        outputReportId = 2; // Adjust as needed
+        await device.selectConfiguration(1);
+        await device.claimInterface(0); // Adjust as needed for your device
+        const interfaceDescriptor = device.configuration.interfaces[0];
+        outEndpointNumber = interfaceDescriptor.alternate.endpoints[0].endpointNumber;
+        inEndpointNumber = interfaceDescriptor.alternate.endpoints[1].endpointNumber;
 
         outputDiv.innerHTML += 'Connected to Device<br>';
 
-        device.addEventListener('inputreport', handleInputReport);
+        device.transferIn(inEndpointNumber, 64).then(handleInputReport);
 
       } catch (error) {
-        outputDiv.innerHTML += 'Error: ' + error + '<br>';
+        outputDiv.innerHTML += 'Error connecting to device: ' + error + '<br>';
         console.error('Connect Error:', error);
       }
-    });
+    }
 
-    sendButton.addEventListener('click', async () => {
+    async function sendMessage() {
       if (!device) {
         outputDiv.innerHTML += 'Error: No device connected<br>';
         return;
@@ -105,32 +87,42 @@
       const encoder = new TextEncoder();
       const data = encoder.encode(inputField.value + '\n');
       try {
-        await device.sendReport(outputReportId, data);
+        await device.transferOut(outEndpointNumber, data);
         inputField.value = '';
       } catch (error) {
         outputDiv.innerHTML += 'Error sending data: ' + error + '<br>';
         console.error('Send Error:', error);
       }
-    });
+    }
 
+    function handleInputReport() {
+      device.transferIn(inEndpointNumber, 64).then(result => {
+        const decoder = new TextDecoder();
+        const message = decoder.decode(result.data);
+        messageBuffer += message;
+        
+        let endOfMessageIndex;
+        while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
+          const message = messageBuffer.slice(0, endOfMessageIndex + 1);
+          messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
+          outputDiv.innerHTML += message + '<br>';
+          outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+
+        // Continue to listen for more data
+        handleInputReport();
+      }).catch(error => {
+        outputDiv.innerHTML += 'Error receiving data: ' + error + '<br>';
+        console.error('Receive Error:', error);
+      });
+    }
+
+    scanButton.addEventListener('click', scanDevices);
+    connectButton.addEventListener('click', connectToDevice);
+    sendButton.addEventListener('click', sendMessage);
     clearOutputButton.addEventListener('click', () => {
       outputDiv.innerHTML = '';
     });
-
-    function handleInputReport(event) {
-      const decoder = new TextDecoder();
-      const data = event.data;
-      const message = decoder.decode(data);
-      messageBuffer += message;
-      
-      let endOfMessageIndex;
-      while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
-        const message = messageBuffer.slice(0, endOfMessageIndex + 1);
-        messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
-        outputDiv.innerHTML += message + '<br>';
-        outputDiv.scrollTop = outputDiv.scrollHeight;
-      }
-    }
   </script>
 </body>
 </html>
