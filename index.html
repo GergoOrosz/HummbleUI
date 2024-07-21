@@ -91,7 +91,7 @@
           });
         });
 
-        const interfaceNumber = interfaces[0].interfaceNumber; // Change this as needed based on your inspection
+        const interfaceNumber = 1; // Change this as needed based on your inspection
         await device.claimInterface(interfaceNumber);
 
         await device.controlTransferOut({
