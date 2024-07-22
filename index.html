@@ -27,11 +27,10 @@
     .button-group {
       position: absolute;
       right: 40px;
-      top: 160px;
+      top: 180px; /* Adjust this value to position the buttons */
       display: flex;
       flex-direction: column;
       gap: 10px;
-      align-items: center; /* Center align the content in the button group */
     }
     .controls {
       display: flex;
@@ -53,11 +52,16 @@
       flex-grow: 1;
     }
     button {
-      padding: 5px 10px;
+      padding: 10px;
+      width: 150px; /* Set a fixed width for all buttons */
+    }
+    .logo-container {
+      position: absolute;
+      right: 40px;
+      top: 40px; /* Adjust this value to position the logo */
     }
     .logo {
-      max-width: 100px; /* Adjust size as necessary */
-      margin-bottom: 20px; /* Space between logo and buttons */
+      max-width: 150px; /* Adjust size as necessary */
     }
   </style>
 </head>
@@ -76,8 +80,10 @@
   <div id="outputContainer">
     <div id="output"></div>
   </div>
-  <div class="button-group">
+  <div class="logo-container">
     <img src="https://github.com/GergoOrosz/HummbleUI/blob/main/Screenshot%202024-07-22%20at%2023.23.00.png?raw=true" alt="Logo" class="logo"> <!-- Add your logo image here -->
+  </div>
+  <div class="button-group">
     <button id="setup">Setup</button>
     <button id="continue">Continue</button>
     <button id="save">Save</button>
