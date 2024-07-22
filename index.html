@@ -61,7 +61,7 @@
       top: 40px; /* Adjust this value to position the logo */
     }
     .logo {
-      max-width: 150px; /* Adjust size as necessary */
+      max-width: 200px; /* Adjust size as necessary */
     }
   </style>
 </head>
@@ -176,9 +176,9 @@
     function escapeHtml(unsafe) {
       return unsafe
         .replace(/&/g, "&amp;")
-        .replace(/<//g, "&lt;")
+        .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
-        .replace(/"//g, "&quot;")
+        .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
     }
 
