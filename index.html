@@ -2,57 +2,64 @@
 <html>
 <head>
   <title>Hummble VS</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; display: flex; flex-direction: column; align-items: center; }
-  #outputContainer { display: flex; align-items: flex-start; width: 100%; justify-content: center; }
-  #output { border: 1px solid #ccc; padding: 10px; margin-top: 10px; width: 50%; height: 70vh; overflow-y: scroll; }
-  #setup { 
-    position: absolute; 
-    right: 40px; /* Adjust this value to set how far from the right edge */
-    top: 160px;  /* Adjust this value to align with the top of the output window */
-  }
-  
-  #continue { 
-    position: absolute; 
-    right: 40px; /* Adjust this value to set how far from the right edge */
-    top: 190px;  /* Adjust this value to align with the top of the output window */
-  }
-  
-  #save { 
-    position: absolute; 
-    right: 40px; /* Adjust this value to set how far from the right edge */
-    top: 220px;  /* Adjust this value to align with the top of the output window */
-  }
-  
-  #reset { 
-    position: absolute; 
-    right: 40px; /* Adjust this value to set how far from the right edge */
-    top: 250px;  /* Adjust this value to align with the top of the output window */
-  }
-  
-   #monitor { 
-    position: absolute; 
-    right: 40px; /* Adjust this value to set how far from the right edge */
-    top: 280px;  /* Adjust this value to align with the top of the output window */
-  }
-  
-     #toggle { 
-    position: absolute; 
-    right: 40px; /* Adjust this value to set how far from the right edge */
-    top: 310px;  /* Adjust this value to align with the top of the output window */
-  }
-
-     #reboot { 
-    position: absolute; 
-    right: 40px; /* Adjust this value to set how far from the right edge */
-    top: 340px;  /* Adjust this value to align with the top of the output window */
-  }
-  
-  .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; align-items: center; }
-  .controls div { display: flex; gap: 10px; }
-  #inputSection { display: flex; gap: 10px; width: 50%; }
-  #input { flex-grow: 1; }
-</style>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #outputContainer {
+      display: flex;
+      align-items: flex-start;
+      width: 100%;
+      justify-content: center;
+    }
+    #output {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 10px;
+      width: 50%;
+      height: 70vh;
+      overflow-y: scroll;
+    }
+    .button-group {
+      position: absolute;
+      right: 40px;
+      top: 160px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center; /* Center align the content in the button group */
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+      align-items: center;
+    }
+    .controls div {
+      display: flex;
+      gap: 10px;
+    }
+    #inputSection {
+      display: flex;
+      gap: 10px;
+      width: 50%;
+    }
+    #input {
+      flex-grow: 1;
+    }
+    button {
+      padding: 5px 10px;
+    }
+    .logo {
+      max-width: 100px; /* Adjust size as necessary */
+      margin-bottom: 20px; /* Space between logo and buttons */
+    }
+  </style>
 </head>
 <body>
   <h1>Hummble Control Interface</h1>
@@ -69,31 +76,33 @@
   <div id="outputContainer">
     <div id="output"></div>
   </div>
-  <button id="setup">Setup</button>
-  <button id="continue">Continue</button>
-  <button id="save">Save</button>
-  <button id="reset">Factory Reset</button>
-  <button id="monitor">Monitor</button>
-  <button id="toggle">Toggle ANC</button>
-  <button id="reboot">Reboot</button>
-
-
+  <div class="button-group">
+    <img src="https://raw.githubusercontent.com/your-username/your-repo/main/path/to/your/logo.png" alt="Logo" class="logo"> <!-- Add your logo image here -->
+    <button id="setup">Setup</button>
+    <button id="continue">Continue</button>
+    <button id="save">Save</button>
+    <button id="reset">Factory Reset</button>
+    <button id="monitor">Monitor</button>
+    <button id="toggle">Toggle ANC</button>
+    <button id="reboot">Reboot</button>
+  </div>
 
   <script>
     let port;
     let reader;
     let outputStream;
     let messageBuffer = '';
-	let monitoring = true;
+    let monitoring = true;
+
     const connectButton = document.getElementById('connect');
     const sendButton = document.getElementById('send');
     const setupButton = document.getElementById('setup');
-	const continueButton = document.getElementById('continue');
-	const saveButton = document.getElementById('save');
-	const resetButton = document.getElementById('reset');
-	const monitorButton = document.getElementById('monitor');
-	const toggleButton = document.getElementById('toggle');
-	const rebootButton = document.getElementById('reboot');
+    const continueButton = document.getElementById('continue');
+    const saveButton = document.getElementById('save');
+    const resetButton = document.getElementById('reset');
+    const monitorButton = document.getElementById('monitor');
+    const toggleButton = document.getElementById('toggle');
+    const rebootButton = document.getElementById('reboot');
     const clearOutputButton = document.getElementById('clearOutput');
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
@@ -110,7 +119,6 @@
         outputDiv.innerHTML += 'Connected to Hummble<br>';
 
         outputStream = port.writable.getWriter();
-
         reader = port.readable.getReader();
         readLoop();
       } catch (error) {
@@ -119,54 +127,30 @@
       }
     });
 
-    sendButton.addEventListener('click', async () => {
-      sendMessage(inputField.value + '\n');
-    });
+    sendButton.addEventListener('click', () => sendMessage(inputField.value + '\n'));
 
-    inputField.addEventListener('keypress', async (event) => {
+    inputField.addEventListener('keypress', event => {
       if (event.key === 'Enter') {
         sendMessage(inputField.value + '\n');
       }
     });
 
-    setupButton.addEventListener('click', async () => {
-      sendMessage('<setup>\n');
-    });
-	
-	continueButton.addEventListener('click', async () => {
-      sendMessage('<continue>\n');
-    });
-    saveButton.addEventListener('click', async () => {
-      sendMessage('<save:1>\n');
-    });
-	
-	saveButton.addEventListener('click', async () => {
-      sendMessage('<save:1>\n');
-    });
-	
-	resetButton.addEventListener('click', async () => {
-      sendMessage('<save:0>\n');
-    });
-	
-    monitorButton.addEventListener('click', async () => {
-      if (monitoring) {
-		monitoring = false;
-        sendMessage('<mt:3>\n');
-      } 
-	  else {
-        monitoring = true;
-        sendMessage('<mt:0>\n');
-      }
-    });
-	
-    toggleButton.addEventListener('click', async () => {
-      sendMessage('<toggle>\n');
-    });
-    rebootButton.addEventListener('click', async () => {
-      sendMessage('<boot>\n');
-    });
-	
+    const commandButtons = [
+      { button: setupButton, command: '<setup>\n' },
+      { button: continueButton, command: '<continue>\n' },
+      { button: saveButton, command: '<save:1>\n' },
+      { button: resetButton, command: '<save:0>\n' },
+      { button: monitorButton, command: () => (monitoring ? '<mt:3>\n' : '<mt:0>\n'), toggle: true },
+      { button: toggleButton, command: '<toggle>\n' },
+      { button: rebootButton, command: '<boot>\n' }
+    ];
 
+    commandButtons.forEach(({ button, command, toggle }) => {
+      button.addEventListener('click', async () => {
+        sendMessage(typeof command === 'function' ? command() : command);
+        if (toggle) monitoring = !monitoring;
+      });
+    });
 
     clearOutputButton.addEventListener('click', () => {
       outputDiv.innerHTML = '';
@@ -182,16 +166,15 @@
       await outputStream.write(data);
       inputField.value = '';
     }
-	
-	// Function to escape HTML characters
-	function escapeHtml(unsafe) {
-	return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-	}
+
+    function escapeHtml(unsafe) {
+      return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/<//g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"//g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
 
     async function readLoop() {
       const decoder = new TextDecoder();
@@ -206,13 +189,13 @@
           messageBuffer += chunk;
 
           let endOfMessageIndex;
-        while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
-			const message = messageBuffer.slice(0, endOfMessageIndex + 1);
-			messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
-			const escapedMessage = escapeHtml(message); // Escape HTML characters
-			outputDiv.innerHTML += escapedMessage + '<br>';
-			outputDiv.scrollTop = outputDiv.scrollHeight;
-		}
+          while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
+            const message = messageBuffer.slice(0, endOfMessageIndex + 1);
+            messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
+            const escapedMessage = escapeHtml(message); // Escape HTML characters
+            outputDiv.innerHTML += escapedMessage + '<br>';
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+          }
         } catch (error) {
           console.error('Read Error:', error);
           break;
