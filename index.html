@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Hummble VS3</title>
+  <title>Hummble VS</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -234,14 +234,23 @@
       if (escapedMessage.startsWith('%') && escapedMessage.endsWith('\n')) {
 
             const status = escapedMessage.slice(1, -1).trim(); // Remove leading and trailing %
-    console.log('Parsed Status:', status); // Log parsed status for debugging
+    //console.log('Parsed Status:', status); // Log parsed status for debugging
     
     // Process status messages
     if (status === 'STATUS0') {
       statusIndicator.textContent = 'Status: Idle';
     } else if (status === 'STATUS1') {
       statusIndicator.textContent = 'Status: Calibration';
-    } else {
+    } else if (status === 'STATUS2') {
+      statusIndicator.textContent = 'Status: ANC Active';
+    } 
+      else if (status === 'STATUS3') {
+      statusIndicator.textContent = 'Status: Setup Checks';
+    } 
+    else if (status === 'STATUS4') {
+      statusIndicator.textContent = 'Status: ANC Inactive';
+    } 
+    else {
       console.log('Unknown Status:', status); // Log unknown statuses for debugging
     }
 
