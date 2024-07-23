@@ -112,7 +112,7 @@
     let messageBuffer = '';
     let monitoring = true;
     let isBusy = false;
-    let statusInterval;
+    let isConnected = false;
 
     const connectButton = document.getElementById('connect');
     const sendButton = document.getElementById('send');
@@ -139,6 +139,7 @@
         await port.open({ baudRate: 115200 });
         outputDiv.innerHTML += 'Connected to Hummble<br>';
         statusIndicator.textContent = 'Status: Connected';
+        isConnected = true;
 
         outputStream = port.writable.getWriter();
         reader = port.readable.getReader();
@@ -148,6 +149,7 @@
         outputDiv.innerHTML += 'Error: ' + error + '<br>';
         console.error('Connect Error:', error);
         statusIndicator.textContent = 'Status: Not Connected';
+        isConnected = false;
       }
     });
 
@@ -181,7 +183,7 @@
     });
 
     async function sendMessage(message) {
-      if (!port) {
+      if (!isConnected) {
         outputDiv.innerHTML += 'Error: No device connected<br>';
         return;
       }
@@ -196,9 +198,9 @@
     function escapeHtml(unsafe) {
       return unsafe
         .replace(/&/g, "&amp;")
-        .replace(/<//g, "&lt;")
+        .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
-        .replace(/"//g, "&quot;")
+        .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
     }
 
@@ -243,9 +245,11 @@
     }
 
     function startStatusUpdates() {
-      statusInterval = setInterval(async () => {
-        if (!isBusy && port) {
+      setInterval(async () => {
+        if (!isBusy && isConnected) {
+          isBusy = true;
           await sendMessage('<status>\n');
+          isBusy = false;
         }
       }, 1000);
     }
