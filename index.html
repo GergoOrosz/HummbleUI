@@ -72,7 +72,7 @@
       background-color: #f0f0f0;
       position: absolute;
       right: 40px;
-      top: 160px; /* Adjust to position the status indicator */
+      top: 200px; /* Adjust to position the status indicator */
     }
   </style>
 </head>
@@ -94,7 +94,7 @@
   <div class="logo-container">
     <img src="https://github.com/GergoOrosz/HummbleUI/blob/main/Screenshot%202024-07-22%20at%2023.23.00.png?raw=true" alt="Logo" class="logo"> <!-- Add your logo image here -->
   </div>
-  <div id="statusIndicator">Not Connected</div>
+  <div id="statusIndicator">Status: Not Connected</div>
   <div class="button-group">
     <button id="setup">Setup</button>
     <button id="continue">Continue</button>
@@ -112,6 +112,7 @@
     let messageBuffer = '';
     let monitoring = true;
     let isBusy = false;
+    let statusInterval;
 
     const connectButton = document.getElementById('connect');
     const sendButton = document.getElementById('send');
@@ -231,9 +232,9 @@
       if (escapedMessage.startsWith('%') && escapedMessage.endsWith('%')) {
         const status = escapedMessage.slice(1, -1);
         if (status === 'STATUS0') {
-          statusIndicator.textContent = 'Idle';
+          statusIndicator.textContent = 'Status: Idle';
         } else if (status === 'STATUS1') {
-          statusIndicator.textContent = 'Calibration';
+          statusIndicator.textContent = 'Status: Calibration';
         }
       } else {
         outputDiv.innerHTML += escapedMessage + '<br>';
@@ -242,9 +243,9 @@
     }
 
     function startStatusUpdates() {
-      setInterval(async () => {
+      statusInterval = setInterval(async () => {
         if (!isBusy && port) {
-          sendMessage('<status>\n');
+          await sendMessage('<status>\n');
         }
       }, 1000);
     }
