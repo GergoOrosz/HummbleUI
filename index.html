@@ -248,7 +248,9 @@
       setInterval(async () => {
         if (!isBusy && isConnected) {
           isBusy = true;
-          await sendMessage('<status>\n');
+          const encoder = new TextEncoder();
+          const data = encoder.encode('<status>\n');
+          await outputStream.write(data);
           isBusy = false;
         }
       }, 1000);
