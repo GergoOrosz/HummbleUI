@@ -27,7 +27,7 @@
     .button-group {
       position: absolute;
       right: 40px;
-      top: 180px; /* Adjust this value to position the buttons */
+      top: 250px; /* Adjust this value to position the buttons */
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -63,6 +63,17 @@
     .logo {
       max-width: 250px; /* Adjust size as necessary */
     }
+    #statusIndicator {
+      width: 150px; /* Same width as the buttons */
+      padding: 10px;
+      border: 1px solid #ccc;
+      text-align: center;
+      margin-bottom: 10px;
+      background-color: #f0f0f0;
+      position: absolute;
+      right: 40px;
+      top: 200px; /* Adjust to position the status indicator */
+    }
   </style>
 </head>
 <body>
@@ -83,6 +94,7 @@
   <div class="logo-container">
     <img src="https://github.com/GergoOrosz/HummbleUI/blob/main/Screenshot%202024-07-22%20at%2023.23.00.png?raw=true" alt="Logo" class="logo"> <!-- Add your logo image here -->
   </div>
+  <div id="statusIndicator">Status: Not Connected</div>
   <div class="button-group">
     <button id="setup">Setup</button>
     <button id="continue">Continue</button>
@@ -99,6 +111,8 @@
     let outputStream;
     let messageBuffer = '';
     let monitoring = true;
+    let isBusy = false;
+    let isConnected = false;
 
     const connectButton = document.getElementById('connect');
     const sendButton = document.getElementById('send');
@@ -112,6 +126,7 @@
     const clearOutputButton = document.getElementById('clearOutput');
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
+    const statusIndicator = document.getElementById('statusIndicator');
 
     connectButton.addEventListener('click', async () => {
       if (!("serial" in navigator)) {
@@ -123,13 +138,18 @@
         port = await navigator.serial.requestPort();
         await port.open({ baudRate: 115200 });
         outputDiv.innerHTML += 'Connected to Hummble<br>';
+        statusIndicator.textContent = 'Status: Connected';
+        isConnected = true;
 
         outputStream = port.writable.getWriter();
         reader = port.readable.getReader();
         readLoop();
+        startStatusUpdates(); // Start requesting status updates
       } catch (error) {
         outputDiv.innerHTML += 'Error: ' + error + '<br>';
         console.error('Connect Error:', error);
+        statusIndicator.textContent = 'Status: Not Connected';
+        isConnected = false;
       }
     });
 
@@ -163,14 +183,16 @@
     });
 
     async function sendMessage(message) {
-      if (!port) {
+      if (!isConnected) {
         outputDiv.innerHTML += 'Error: No device connected<br>';
         return;
       }
+      isBusy = true;
       const encoder = new TextEncoder();
       const data = encoder.encode(message);
       await outputStream.write(data);
       inputField.value = '';
+      isBusy = false;
     }
 
     function escapeHtml(unsafe) {
@@ -198,15 +220,40 @@
           while ((endOfMessageIndex = messageBuffer.indexOf('\n')) !== -1) {
             const message = messageBuffer.slice(0, endOfMessageIndex + 1);
             messageBuffer = messageBuffer.slice(endOfMessageIndex + 1);
-            const escapedMessage = escapeHtml(message); // Escape HTML characters
-            outputDiv.innerHTML += escapedMessage + '<br>';
-            outputDiv.scrollTop = outputDiv.scrollHeight;
+            processMessage(message);
           }
         } catch (error) {
           console.error('Read Error:', error);
           break;
         }
       }
+    }
+
+    function processMessage(message) {
+      const escapedMessage = escapeHtml(message);
+      if (escapedMessage.startsWith('%') && escapedMessage.endsWith('%')) {
+        const status = escapedMessage.slice(1, -1);
+        if (status === 'STATUS0') {
+          statusIndicator.textContent = 'Status: Idle';
+        } else if (status === 'STATUS1') {
+          statusIndicator.textContent = 'Status: Calibration';
+        }
+      } else {
+        outputDiv.innerHTML += escapedMessage + '<br>';
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+      }
+    }
+
+    function startStatusUpdates() {
+      setInterval(async () => {
+        if (!isBusy && isConnected) {
+          isBusy = true;
+          const encoder = new TextEncoder();
+          const data = encoder.encode('<status>\n');
+          await outputStream.write(data);
+          isBusy = false;
+        }
+      }, 1000);
     }
   </script>
 </body>
