@@ -234,9 +234,9 @@
       if (escapedMessage.startsWith('%') && escapedMessage.endsWith('\n')) {
         const status = escapedMessage.slice(0, -1);
         console.log(status);
-        if (status === '%STATUS0') {
+        if (status == '%STATUS0') {
           statusIndicator.textContent = 'Status: Idle';
-        } else if (status === '%STATUS1') {
+        } else if (status == '%STATUS1') {
           statusIndicator.textContent = 'Status: Calibration';
         }
       } else {
