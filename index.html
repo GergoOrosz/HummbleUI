@@ -231,7 +231,7 @@
 
     function processMessage(message) {
       const escapedMessage = escapeHtml(message);
-      if (escapedMessage.startsWith('%') && escapedMessage.endsWith('%')) {
+      if (escapedMessage.startsWith('%') && escapedMessage.endsWith('\n')) {
         const status = escapedMessage.slice(1, -1);
         if (status === 'STATUS0') {
           statusIndicator.textContent = 'Status: Idle';
