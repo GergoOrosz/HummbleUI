@@ -20,7 +20,7 @@
       border: 1px solid #ccc;
       padding: 10px;
       margin-top: 10px;
-      width: 60%;
+      width: 55%;
       height: 70vh;
       overflow-y: scroll;
     }
@@ -229,6 +229,10 @@
       }
     }
 
+    function updateStatusIndicatorColor(color) {
+      statusIndicator.style.backgroundColor = color;
+    }
+
     function processMessage(message) {
       const escapedMessage = escapeHtml(message);
       if (escapedMessage.startsWith('%') && escapedMessage.endsWith('\n')) {
@@ -239,16 +243,21 @@
     // Process status messages
     if (status === 'STATUS0') {
       statusIndicator.textContent = 'Status: Idle';
+      updateStatusIndicatorColor('#d3ffd3'); // Light green
     } else if (status === 'STATUS1') {
       statusIndicator.textContent = 'Status: Calibration';
+      updateStatusIndicatorColor('#ffd3d3'); // Light red
     } else if (status === 'STATUS2') {
       statusIndicator.textContent = 'Status: ANC Active';
+      updateStatusIndicatorColor('#ADD8E6'); // Light green
     } 
       else if (status === 'STATUS3') {
       statusIndicator.textContent = 'Status: Setup Checks';
+      updateStatusIndicatorColor('#ffd3d3'); // Light red
     } 
     else if (status === 'STATUS4') {
       statusIndicator.textContent = 'Status: ANC Inactive';
+      updateStatusIndicatorColor('#d3ffd3'); // Light green
     } 
     else {
       console.log('Unknown Status:', status); // Log unknown statuses for debugging
