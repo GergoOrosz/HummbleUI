@@ -214,7 +214,7 @@
             reader.releaseLock();
             break;
           }
-          const chunk = decoder.decode(value);
+          const chunk = decoder.decode(value, { stream: true });
           messageBuffer += chunk;
 
           let endOfMessageIndex;
@@ -285,6 +285,7 @@
             statusIndicator.textContent = 'Status: Not Connected';
             updateStatusIndicatorColor('#f0f0f0'); // Reset to default color
             isConnected = false;
+            port.close(); // Close the port
           }
         }
       }, 1000);
