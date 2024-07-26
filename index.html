@@ -281,7 +281,7 @@
           isBusy = false;
 
           missedStatusCount++;
-          if (missedStatusCount >= 3) {
+          if (missedStatusCount >= 5) {
             statusIndicator.textContent = 'Status: Not Connected';
             updateStatusIndicatorColor('#f0f0f0'); // Reset to default color
             isConnected = false;
