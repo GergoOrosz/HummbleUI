@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Hummble VS</title>
+  <title>Hummble VS2</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -113,6 +113,7 @@
     let monitoring = true;
     let isBusy = false;
     let isConnected = false;
+    let missedStatusCount = 0;
 
     const connectButton = document.getElementById('connect');
     const sendButton = document.getElementById('send');
@@ -213,7 +214,7 @@
             reader.releaseLock();
             break;
           }
-          const chunk = decoder.decode(value);
+          const chunk = decoder.decode(value, { stream: true });
           messageBuffer += chunk;
 
           let endOfMessageIndex;
@@ -236,33 +237,34 @@
     function processMessage(message) {
       const escapedMessage = escapeHtml(message);
       if (escapedMessage.startsWith('%') && escapedMessage.endsWith('\n')) {
+        const status = escapedMessage.slice(1, -1).trim(); // Remove leading and trailing %
+        missedStatusCount = 0; // Reset the missed status count on receiving a status message
 
-            const status = escapedMessage.slice(1, -1).trim(); // Remove leading and trailing %
-    //console.log('Parsed Status:', status); // Log parsed status for debugging
-    
-    // Process status messages
-    if (status === 'STATUS0') {
-      statusIndicator.textContent = 'Status: Idle';
-      updateStatusIndicatorColor('#d3ffd3'); // Light green
-    } else if (status === 'STATUS1') {
-      statusIndicator.textContent = 'Status: Calibration';
-      updateStatusIndicatorColor('#ffd3d3'); // Light red
-    } else if (status === 'STATUS2') {
-      statusIndicator.textContent = 'Status: ANC Active';
-      updateStatusIndicatorColor('#1d9bd3'); // Hummble Blue
-    } 
-      else if (status === 'STATUS3') {
-      statusIndicator.textContent = 'Status: Setup Checks';
-      updateStatusIndicatorColor('#ffd3d3'); // Light red
-    } 
-    else if (status === 'STATUS4') {
-      statusIndicator.textContent = 'Status: ANC Inactive';
-      updateStatusIndicatorColor('#d3ffd3'); // Light green
-    } 
-    else {
-      console.log('Unknown Status:', status); // Log unknown statuses for debugging
-    }
-
+        // Process status messages
+        switch (status) {
+          case 'STATUS0':
+            statusIndicator.textContent = 'Status: Idle';
+            updateStatusIndicatorColor('#d3ffd3'); // Light green
+            break;
+          case 'STATUS1':
+            statusIndicator.textContent = 'Status: Calibration';
+            updateStatusIndicatorColor('#ffd3d3'); // Light red
+            break;
+          case 'STATUS2':
+            statusIndicator.textContent = 'Status: ANC Active';
+            updateStatusIndicatorColor('#1d9bd3'); // Hummble Blue
+            break;
+          case 'STATUS3':
+            statusIndicator.textContent = 'Status: Setup Checks';
+            updateStatusIndicatorColor('#ffd3d3'); // Light red
+            break;
+          case 'STATUS4':
+            statusIndicator.textContent = 'Status: ANC Inactive';
+            updateStatusIndicatorColor('#d3ffd3'); // Light green
+            break;
+          default:
+            console.log('Unknown Status:', status); // Log unknown statuses for debugging
+        }
       } else {
         outputDiv.innerHTML += escapedMessage + '<br>';
         outputDiv.scrollTop = outputDiv.scrollHeight;
@@ -277,6 +279,13 @@
           const data = encoder.encode('<status>\n');
           await outputStream.write(data);
           isBusy = false;
+
+          missedStatusCount++;
+          if (missedStatusCount >= 3) {
+            statusIndicator.textContent = 'Status: Not Connected';
+            updateStatusIndicatorColor('#f0f0f0'); // Reset to default color
+            isConnected = false;
+          }
         }
       }, 1000);
     }
