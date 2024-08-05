@@ -224,7 +224,7 @@
             processMessage(message);
           }
 
-          if (messageBuffer.length > 100000) {
+          if (messageBuffer.length > 1000000) {
             throw new Error('BufferOverrunError: Buffer overrun');
           }
 
