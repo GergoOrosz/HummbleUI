@@ -105,6 +105,7 @@
     <button id="monitor">Monitor</button>
     <button id="toggle">Toggle ANC</button>
     <button id="reboot">Reboot</button>
+    <button id="calibrate">Re-Calibrate</button>
   </div>
 
   <script>
@@ -126,6 +127,7 @@
     const monitorButton = document.getElementById('monitor');
     const toggleButton = document.getElementById('toggle');
     const rebootButton = document.getElementById('reboot');
+    const calibrateButton = document.getElementById('calibrate');
     const clearOutputButton = document.getElementById('clearOutput');
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
@@ -162,13 +164,14 @@
     });
 
     const commandButtons = [
-      { button: setupButton, command: '<setup>\n' },
+      { button: setupButton, command: '<check:1>\n' },
       { button: continueButton, command: '<continue>\n' },
       { button: saveButton, command: '<save:1>\n' },
       { button: resetButton, command: '<save:0>\n' },
       { button: monitorButton, command: () => (monitoring ? '<mt:3>\n' : '<mt:0>\n'), toggle: true },
       { button: toggleButton, command: '<toggle>\n' },
       { button: rebootButton, command: '<boot>\n' }
+      { button: calibrateButton, command: '<m:2>\n' }
     ];
 
     commandButtons.forEach(({ button, command, toggle }) => {
