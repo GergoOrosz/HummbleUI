@@ -34,6 +34,19 @@
       right: 40px;
       top: 220px;
     }
+
+    .button-group-left {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: fixed;
+      left: 40px;
+      top: 220px;
+    }
+
+
+
+    
     .controls {
       display: flex;
       flex-direction: column;
@@ -108,6 +121,13 @@
     <button id="Cancel">Cancel</button>
   </div>
 
+  <div class="button-group left">
+    <button id="type1">Type 1</button>
+    <button id="type2">Type 2</button>
+  </div>
+  
+  
+
   <script>
     let port;
     let reader;
@@ -132,6 +152,9 @@
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
     const statusIndicator = document.getElementById('statusIndicator');
+
+    const type1Button = document.getElementById('type1');
+    const type2Button = document.getElementById('type2');
 
     connectButton.addEventListener('click', async () => {
       if (!("serial" in navigator)) {
@@ -171,7 +194,10 @@
       { button: monitorButton, command: () => (monitoring ? '<mt:3>\n' : '<mt:0>\n'), toggle: true },
       { button: toggleButton, command: '<toggle>\n' },
       { button: rebootButton, command: '<boot>\n' },
-      { button: cancelButton, command: '<check:0>\n' }
+      { button: cancelButton, command: '<check:0>\n'},
+      { button: type1Button, command: '<type:1>\n' },
+      { button: type2Button, command: '<type:2>\n' }
+      
     ];
 
     commandButtons.forEach(({ button, command, toggle }) => {
