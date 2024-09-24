@@ -31,15 +31,8 @@
       flex-direction: column;
       gap: 10px;
       position: fixed;
-      top: 220px;
-    }
-    /* Existing right button group */
-    .button-group.right {
       right: 40px;
-    }
-    /* New left button group */
-    .button-group.left {
-      left: 40px;
+      top: 220px;
     }
     .controls {
       display: flex;
@@ -97,19 +90,14 @@
       <button id="send">Send</button>
     </div>
   </div>
-  
   <div id="outputContainer">
     <div id="output"></div>
   </div>
-
   <div class="logo-container">
     <img src="https://github.com/GergoOrosz/HummbleUI/blob/main/Screenshot%202024-07-22%20at%2023.23.00.png?raw=true" alt="Logo" class="logo">
   </div>
-  
   <div id="statusIndicator">Status: Not Connected</div>
-  
-  <!-- Right button group (existing) -->
-  <div class="button-group right">
+  <div class="button-group">
     <button id="setup">Setup</button>
     <button id="continue">Continue</button>
     <button id="save">Save</button>
@@ -118,12 +106,6 @@
     <button id="toggle">Toggle ANC</button>
     <button id="reboot">Reboot</button>
     <button id="Cancel">Cancel</button>
-  </div>
-
-  <!-- Left button group (new) -->
-  <div class="button-group left">
-    <button id="type1">Type 1</button>
-    <button id="type2">Type 2</button>
   </div>
 
   <script>
@@ -150,14 +132,6 @@
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
     const statusIndicator = document.getElementById('statusIndicator');
-
-    // New left buttons
-    const type1Button = document.getElementById('type1');
-    const type2Button = document.getElementById('type2');
-
-    // Event Listeners for new buttons
-    type1Button.addEventListener('click', () => sendMessage('<type:1>\n'));
-    type2Button.addEventListener('click', () => sendMessage('<type:2>\n'));
 
     connectButton.addEventListener('click', async () => {
       if (!("serial" in navigator)) {
@@ -264,3 +238,106 @@
       }
     }
 
+    function updateStatusIndicatorColor(color) {
+      statusIndicator.style.backgroundColor = color;
+    }
+
+    function processMessage(message) {
+      const escapedMessage = escapeHtml(message);
+      if (escapedMessage.startsWith('%') && escapedMessage.endsWith('\n')) {
+        const status = escapedMessage.slice(1, -1).trim();
+        missedStatusCount = 0;
+
+        switch (status) {
+          case 'STATUS0':
+            statusIndicator.textContent = 'Status: Idle';
+            updateStatusIndicatorColor('#ffd966');
+            break;
+          case 'STATUS1':
+            statusIndicator.textContent = 'Status: Calibration';
+            updateStatusIndicatorColor('#ffd3d3');
+            break;
+          case 'STATUS2':
+            statusIndicator.textContent = 'Status: ANC Active';
+            updateStatusIndicatorColor('#1d9bd3');
+            break;
+          case 'STATUS3':
+            statusIndicator.textContent = 'Status: Setup Checks';
+            updateStatusIndicatorColor('#ffd3d3');
+            break;
+          case 'STATUS4':
+            statusIndicator.textContent = 'Status: ANC Inactive';
+            updateStatusIndicatorColor('#d3ffd3');
+            break;
+          default:
+            console.log('Unknown Status:', status);
+        }
+      } else {
+        outputDiv.innerHTML += escapedMessage + '<br>';
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+      }
+    }
+
+    function handleReadError(error) {
+      console.error('Error reading data:', error);
+      if (error.message.includes('Buffer overrun')) {
+        outputDiv.innerHTML += 'Error: Buffer overrun. Please refresh the page...<br>';
+      } else {
+        outputDiv.innerHTML += `Error: ${error.message}<br>`;
+      }
+      closePort();
+    }
+
+    function handleConnectionError(error) {
+      console.error('Connection Error:', error);
+      outputDiv.innerHTML += `Connection Error: ${error.message}<br>`;
+      statusIndicator.textContent = 'Status: Not Connected';
+      closePort();
+    }
+
+    async function closePort() {
+      try {
+        if (reader) {
+          await reader.cancel();
+          reader.releaseLock();
+        }
+        if (outputStream) {
+          await outputStream.close();
+        }
+        if (port) {
+          await port.close();
+        }
+      } catch (error) {
+        console.error('Error closing port:', error);
+      } finally {
+        isConnected = false;
+        isBusy = false;
+        messageBuffer = '';
+        statusIndicator.textContent = 'Status: Not Connected';
+        updateStatusIndicatorColor('#f0f0f0');
+      }
+    }
+
+    function startStatusUpdates() {
+      setInterval(async () => {
+        if (!isBusy && isConnected) {
+          try {
+            isBusy = true;
+            const encoder = new TextEncoder();
+            const data = encoder.encode('<status>\n');
+            await outputStream.write(data);
+          } catch (error) {
+            handleConnectionError(error);
+          } finally {
+            isBusy = false;
+            missedStatusCount++;
+            if (missedStatusCount >= 5) {
+              closePort();
+            }
+          }
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
