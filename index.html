@@ -17,6 +17,7 @@
       align-items: flex-start;
       width: 100%;
       justify-content: center;
+      position: relative; /* Added to allow absolute positioning of left button group */
     }
     #output {
       border: 1px solid #ccc;
@@ -33,6 +34,15 @@
       position: fixed;
       right: 40px;
       top: 220px;
+    }
+    /* New left button group style */
+    .button-group-left {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: absolute;  /* Added for absolute positioning relative to outputContainer */
+      left: -170px; /* Position on the left of the output container */
+      top: 10px;
     }
     .controls {
       display: flex;
@@ -90,13 +100,23 @@
       <button id="send">Send</button>
     </div>
   </div>
+  
   <div id="outputContainer">
     <div id="output"></div>
+
+    <!-- New left button group -->
+    <div class="button-group-left">
+      <button id="type1">Type 1</button>
+      <button id="type2">Type 2</button>
+    </div>
   </div>
+
   <div class="logo-container">
     <img src="https://github.com/GergoOrosz/HummbleUI/blob/main/Screenshot%202024-07-22%20at%2023.23.00.png?raw=true" alt="Logo" class="logo">
   </div>
+  
   <div id="statusIndicator">Status: Not Connected</div>
+  
   <div class="button-group">
     <button id="setup">Setup</button>
     <button id="continue">Continue</button>
@@ -132,6 +152,14 @@
     const outputDiv = document.getElementById('output');
     const inputField = document.getElementById('input');
     const statusIndicator = document.getElementById('statusIndicator');
+
+    // New left buttons
+    const type1Button = document.getElementById('type1');
+    const type2Button = document.getElementById('type2');
+
+    // Event Listeners for new buttons
+    type1Button.addEventListener('click', () => sendMessage('<type:1>\n'));
+    type2Button.addEventListener('click', () => sendMessage('<type:2>\n'));
 
     connectButton.addEventListener('click', async () => {
       if (!("serial" in navigator)) {
