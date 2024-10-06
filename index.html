@@ -268,42 +268,58 @@
       statusIndicator.style.backgroundColor = color;
     }
 
-    function processMessage(message) {
-      const escapedMessage = escapeHtml(message);
-      if (escapedMessage.startsWith('%') && escapedMessage.endsWith('\n')) {
-        const status = escapedMessage.slice(1, -1).trim();
-        missedStatusCount = 0;
+    // Function to count the number of lines in the output window
+	function checkOutputLineCount() {
+	const lines = outputDiv.innerHTML.split('<br>').length;
+  
+  // If lines exceed 1000, clear the output
+	if (lines > 1000) {
+		clearOutput();
+	}	
+	}
 
-        switch (status) {
-          case 'STATUS0':
-            statusIndicator.textContent = 'Status: Idle';
-            updateStatusIndicatorColor('#ffd966');
-            break;
-          case 'STATUS1':
-            statusIndicator.textContent = 'Status: Calibration';
-            updateStatusIndicatorColor('#ffd3d3');
-            break;
-          case 'STATUS2':
-            statusIndicator.textContent = 'Status: ANC Active';
-            updateStatusIndicatorColor('#1d9bd3');
-            break;
-          case 'STATUS3':
-            statusIndicator.textContent = 'Status: Setup';
-            updateStatusIndicatorColor('#ffd3d3');
-            break;
-          case 'STATUS4':
-            statusIndicator.textContent = 'Status: ANC Inactive';
-            updateStatusIndicatorColor('#d3ffd3');
-            break;
-          default:
-            console.log('Unknown Status:', status);
-        }
-      } else {
-        outputDiv.innerHTML += escapedMessage + '<br>';
-        outputDiv.scrollTop = outputDiv.scrollHeight;
-      }
+// Modify this function to clear output
+	function clearOutput() {
+	outputDiv.innerHTML = '';  // Clear the output window
+	}
+
+	// Call this function inside processMessage to check the line count after each message is processed
+	function processMessage(message) {
+	const escapedMessage = escapeHtml(message);
+	if (escapedMessage.startsWith('%') && escapedMessage.endsWith('\n')) {
+		const status = escapedMessage.slice(1, -1).trim();
+		missedStatusCount = 0;
+
+	switch (status) {
+      case 'STATUS0':
+        statusIndicator.textContent = 'Status: Idle';
+        updateStatusIndicatorColor('#ffd966');
+        break;
+      case 'STATUS1':
+        statusIndicator.textContent = 'Status: Calibration';
+        updateStatusIndicatorColor('#ffd3d3');
+        break;
+      case 'STATUS2':
+        statusIndicator.textContent = 'Status: ANC Active';
+        updateStatusIndicatorColor('#1d9bd3');
+        break;
+      case 'STATUS3':
+        statusIndicator.textContent = 'Status: Setup';
+        updateStatusIndicatorColor('#ffd3d3');
+        break;
+      case 'STATUS4':
+        statusIndicator.textContent = 'Status: ANC Inactive';
+        updateStatusIndicatorColor('#d3ffd3');
+        break;
+      default:
+        console.log('Unknown Status:', status);
     }
-
+  } else {
+    outputDiv.innerHTML += escapedMessage + '<br>';
+    outputDiv.scrollTop = outputDiv.scrollHeight;
+    checkOutputLineCount();  // ***New code: Check the line count here***
+  }
+}
     function handleReadError(error) {
       console.error('Error reading data:', error);
       if (error.message.includes('Buffer overrun')) {
